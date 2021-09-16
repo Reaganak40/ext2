@@ -277,9 +277,40 @@ int rmdir(char *name){
 }
 
 // This ls() list CWD. You MUST improve it to ls(char *pathname)
-int ls()
+int ls(char* name)
 {
-  NODE *p = cwd->child;
+
+  NODE *p;
+  int last_ref = 0;
+
+  if(strcmp(name, root->name) == 0){
+    p = root->child;
+    
+  }else if(strcmp(name, ".") == 0 || strcmp(name, "./") == 0){ // ls .
+    p = cwd->child;
+  }else if(strcmp(name, "..") == 0 || strcmp(name, "../") == 0){ // cd ..
+    if(cwd == root){ // when cd .. at root
+      printf("can't track path .. when cwd is root\n");
+      return 0;
+    }else{
+      p = cwd->parent->child;
+    }
+  }else{
+  
+    if(strlen(name) == 0){
+      p = cwd->child;
+
+    }else{ //if ls has pathname included
+      p = find_dir_node(name, &last_ref);
+      p = search_child(p, name + last_ref);
+
+      if(!p){ //if pathname doesn't work
+        printf("can't find path for ls with [...]/%s\n", name + last_ref);
+        return 0;
+      }
+      p = p->child;
+    }
+  }
   printf("cwd contents = ");
   while(p){
     printf("[%c %s] ", p->type, p->name);
@@ -528,8 +559,6 @@ void help(void){
 }
 
 
-
-
 int initialize()
 {
     root = (NODE *)malloc(sizeof(NODE));
@@ -566,7 +595,7 @@ int main()
       printf("**** %s %s\n", command, pathname);
       switch (index){
         case 0: mkdir(pathname);    break;
-        case 1: ls();               break;
+        case 1: ls(pathname);               break;
         case 2: quit();             break;
         case 3: cd(pathname);       break;
         case 4: help();             break;
