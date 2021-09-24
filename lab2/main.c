@@ -607,11 +607,6 @@ int main()
         case 10: reload();          break;
 
 
-
-
-
-
-
         default: printf("invalid command\n");
           break;
 
