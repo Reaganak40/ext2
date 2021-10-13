@@ -147,6 +147,8 @@ int myprintf(char* fmt, ...){
 
 int main(int argc, char *argv[ ], char **env[ ]){
 
+
+    int n[10000];
     myprintf("Number of arguments: %d\n", argc);
 
     myprintf("------------\n");

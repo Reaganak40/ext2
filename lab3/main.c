@@ -138,11 +138,12 @@ void sh_exec(char* cmd, char* line, char* env[ ]){
 
        i = 0;
        
-       printf("PROC %d tries %d in each PATH dir:\n", getpid(), arg[0]);
+       //printf("PROC %d tries %d in each PATH dir:\n", getpid(), arg[0]);
        while(r == -1){
        
         strcpy(line, dir[i]); strcat(line, "/"); strcat(line, cmd);
-        printf("i=%d    cmd=%s\n", i, line);
+        //printf("i=%d    cmd=%s\n", i, line);
+        
         r = execve(line, arg, env);
 
         i++;
@@ -209,9 +210,10 @@ int main(int argc, char *argv[ ], char *env[ ])
        printf("\nZOMBIE child=%d exitStatus=%x\n", pid, status);
        printf("main sh %d repeat loop\n", getpid());
        printf("---------------------------------------\n");
-
+       
      }
      else{
+       
        int p = 0;
        printf("child sh %d running\n", getpid());
        p = check_pipe(); //checks if pipe is neccessary
@@ -229,20 +231,30 @@ int main(int argc, char *argv[ ], char *env[ ])
         if(pid){
             
             printf("COMMAND: %s\n", cmd);
-            close(pd[0]);
-            close(1);   /// ERROR, PROGRAM ENDS
-            printf("----\n");
-            dup(pd[1]);
-            close(pd[1]);
-            
-            
+            if(pd){
+              printf("HELLO\n");
+
+              cmd = arg[tail];
+              printf("HELLLLOOOOO1: %s\n", cmd);
+
+              close(pd[1]);
+
+              close(0);
+              dup(pd[0]);
+              close(pd[0]);
+
+              
+            }
+            printf("HI\n");
             sh_exec(cmd, line, env);
         }else{
-            cmd = arg[tail];
-            close(pd[1]);
-            close(0);
-            dup(pd[0]);
+            cmd = arg[head];
             close(pd[0]);
+            printf("%s\n", line);
+            //close(1);   /// ERROR, PROGRAM ENDS
+            dup2(pd[1], 1);
+            printf("----\n");
+            close(pd[1]);
 
             printf("HELLLLOOOOO: %s\n", cmd);
             sh_exec(cmd, line, env);
