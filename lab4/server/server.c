@@ -23,6 +23,106 @@ int n;
 char ans[MAX];
 char line[MAX];
 
+// LAB4 CODE =================================================================
+
+char gpath[128];    // hold token strings
+char *arg[64];      // token string pointers
+int  n;             // number of token strings
+
+//Function Declarations ===========
+void lab4_run_command(char* cmd);
+int tokenize(char *pathname);
+int my_ls(void);
+int my_cd(void);
+int my_pwd(void);
+int my_mkdir(void);
+int my_rmdir(void);
+int my_rm(void);
+//=================================
+
+
+void lab4_run_command(char* cmd){
+  
+  tokenize(cmd); //tokenize cmd and put into arg[]
+
+  if(strcmp(arg[0], "ls") == 0){ // cmd: ls
+    my_ls();
+    return;
+  }
+
+  if(strcmp(arg[0], "cd") == 0){ // cmd: cd
+    my_cd();
+    return;
+  }
+
+  if(strcmp(arg[0], "pwd") == 0){ // cmd: pwd
+    my_pwd();
+    return;
+  }
+
+  if(strcmp(arg[0], "mkdir") == 0){ // cmd: mkdir
+    my_mkdir();
+    return;
+  }
+
+  if(strcmp(arg[0], "rmdir") == 0){ // cmd: rmdir
+    my_rmdir();
+    return;
+  }
+
+  if(strcmp(arg[0], "rm") == 0){ // cmd: rm
+    my_rm();
+    return;
+  }
+
+  printf("Error: Command %s not defined.\n", arg[0]);
+}
+
+int tokenize(char *pathname) // YOU have done this in LAB2
+{                            // YOU better know how to apply it from now on
+  char *s;
+  strcpy(gpath, pathname);   // copy into global gpath[]
+  s = strtok(gpath, " ");    
+  n = 0;
+  while(s){
+    arg[n++] = s;           // token string pointers  
+    s = strtok(0, " ");
+  }
+  arg[n] =0;                // arg[n] = NULL pointer
+}
+
+int my_ls(void){
+
+  return 0;
+}
+
+int my_cd(void){
+
+  return chdir(arg[1]);
+}
+
+int my_pwd(void){
+
+  return 0;
+}
+
+int my_mkdir(void){
+
+  return mkdir(arg[1], 0755);
+}
+
+int my_rmdir(void){
+
+  return rmdir(arg[1]);
+}
+int my_rm(void){
+
+  return unlink(arg[1]);
+}
+
+
+//============================================================================
+
 int main() 
 { 
     int sfd, cfd, len; 
@@ -74,7 +174,12 @@ int main()
        // Processing loop
        while(1){
          printf("server ready for next request ....\n");
-         n = read(cfd, line, MAX);
+         
+         n = read(cfd, line, MAX); //get command from client
+
+         lab4_run_command(line);
+         
+         
          if (n==0){
            printf("server: client died, server loops\n");
            close(cfd);
