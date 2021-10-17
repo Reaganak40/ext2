@@ -52,6 +52,7 @@ int main(int argc, char *argv[], char *env[])
       printf("input a line : ");
       bzero(line, MAX);                // zero out line[ ]
       fgets(line, MAX, stdin);         // get a line (end with \n) from stdin
+      
 
       line[strlen(line)-1] = 0;        // kill \n at end
       if (line[0]==0)                  // exit if NULL line
@@ -59,11 +60,15 @@ int main(int argc, char *argv[], char *env[])
 
       // Send ENTIRE line to server
       n = write(sfd, line, MAX);
-      printf("client: wrote n=%d bytes; line=(%s)\n", n, line);
 
-      // Read a line from sock and show it
-      n = read(sfd, ans, MAX);
-      printf("client: read  n=%d bytes; echo=(%s)\n",n, ans);
+      // Read packets from sock and show it
+
+      strcpy(ans, ""); //reset ans
+      while(strstr(ans, "[CMD") == NULL){ //"[CMD" is contained within every last packet sent by client 
+        n = read(sfd, ans, MAX);
+        printf("%s", ans);
+      } //while loops ends with [CMD Successful] or [CMD Unsuccessful]
+      printf("\n");
   }
 }
 
