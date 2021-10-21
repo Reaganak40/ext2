@@ -381,6 +381,7 @@ int main()
             printf("Get Complete.\n");
 
             cmd_success = 0;
+            strcpy(ans, "");
 
          }else{
 
