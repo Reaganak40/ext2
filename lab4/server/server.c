@@ -41,7 +41,8 @@ int my_rmdir(void);
 int my_rm(void);
 int ls_file(char* fname);
 int ls_dir(char* dname);
-int send_packet(void);
+int my_get(void);
+int send_packet(int end);
 //=================================
 
 int lab4_run_command(char* cmd){ // 'main' function that runs lab4
@@ -74,6 +75,10 @@ int lab4_run_command(char* cmd){ // 'main' function that runs lab4
 
   if(strcmp(arg[0], "rm") == 0){ // cmd: rm
     return my_rm();
+  }
+
+  if(strcmp(arg[0], "get") == 0){ // cmd: rm
+    return my_get();
   }
 
 
@@ -225,7 +230,7 @@ int ls_dir(char* dname){ //takes directory and iterates (and prints) through fil
       ls_file(d->d_name);
       strcat(ans, "\n");
 
-      send_packet(); //send current ls line and reset ans buf to avoid overload
+      send_packet(0); //send current ls line and reset ans buf to avoid overload
       strcpy(ans, "");
 
     
@@ -236,8 +241,56 @@ int ls_dir(char* dname){ //takes directory and iterates (and prints) through fil
   return 0;
 }
 
-int send_packet(void){ //takes ans string and writes to client (precondition: Client exists)
-  return write(cfd, ans, MAX); //assume client hasn't disconnected
+int my_get(void){
+
+  FILE* rFile; //file to read
+  char buf[MAX]; //where file content is read to before send_packet()
+  rFile = fopen(arg[1], "r");
+
+  if(!rFile){
+    strcat(ans, "Error: Can't open file for mode read.\n");
+    return -1; //can't open file for mode read
+  }
+
+  send_packet(0);
+  strcpy(ans, "");
+  //begin reading file content
+  while(fgets(buf, MAX, rFile) != NULL){
+
+    if((strlen(ans) + strlen(buf)) >= MAX){ //if exceeded packet size (send if over and reset ans)
+      send_packet(0);
+      strcpy(ans, "");
+    }
+    strcat(ans, buf);
+    
+    if(feof(rFile)){ //if reached end of file
+      break;
+    }
+  }
+  send_packet(1);
+  strcpy(ans, "");
+
+  fclose(rFile);
+
+  return 0;
+}
+
+int send_packet(int end){ //takes ans string and writes to client (precondition: Client exists)
+  char buf[MAX]; //hold verify data
+  
+  printf("%s -- %d\n", ans, strlen(ans));
+  write(cfd, ans, MAX); //assume client hasn't disconnected
+
+  //verify with client data was recieved
+  n = read(cfd, buf, MAX); //get command from client
+
+  if(end){ //this was the last packet 
+    write(cfd, buf, MAX); //send back verify message
+  }else{ //there are more packets to send (end == 0)
+    char* n = &buf[0];
+    *n = n+1; //change the verify message to be different
+    write(cfd, buf, MAX); //send back altered verify message
+  }
 }
 
 //============================================================================
@@ -308,17 +361,21 @@ int main()
          }
          cmd_success = lab4_run_command(line); // custom function to run lab4 code
          
-         
+         if(strcmp(arg[0], "get") != 0){ //dont send cmd result if command is get
 
-         if(!cmd_success){ //cmd_sucess == 0 when lab4_run_command() encountered no issues
-            strcat(ans, "[CMD Successful]\n");
-         }else{
-            strcat(ans, "[CMD Unsuccessful]\n");
+          if(!cmd_success){ //cmd_sucess == 0 when lab4_run_command() encountered no issues
+              strcat(ans, "[CMD Successful]\n");
+          }else{
+              strcat(ans, "[CMD Unsuccessful]\n");
+          }
+           // send the ans to client 
+           n = send_packet(1);
          }
-
-         // send the ans to client 
-         n = send_packet();
          printf("server: ready for next request\n");
        }
     }
-}
+}/////////////////////////////////////4
+/////////////////////////
+/////////////////
+
+////////////////////////
