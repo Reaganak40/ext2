@@ -47,7 +47,8 @@ int my_rm(void);
 int ls_file(char* fname);
 int ls_dir(char* dname);
 int my_cat(void);
-//int send_packet(int end);
+int my_put(void);
+int send_packet(int end);
 
 int lab4_run_command(char* cmd){ // 'main' function that runs lab4
   
@@ -107,12 +108,18 @@ int set_route_control(void){
     return IS_GET;
   }
 
+  if(strcmp(arg[0], "put") == 0){
+    return IS_PUT;
+  }
+
   if(*(arg[0]) == 'l' && (strcmp(arg[0], "ls") != 0)){ //if cmd starts with 'l' and isnt "ls"
     char* s = arg[0];
     arg[0] = ++s;
 
     return FOR_CLIENT; //is a local command
   }
+
+  return FOR_SERVER;
 }
 
 int my_cd(void){
@@ -251,6 +258,42 @@ int ls_dir(char* dname){ //takes directory and iterates (and prints) through fil
   return 0;
 }
 
+int my_put(void){
+
+  FILE* rFile; //file to read
+  char buf[MAX]; //where file content is read to before send_packet()
+  rFile = fopen(arg[1], "r");
+
+  if(!rFile){
+    strcat(ans, "Error: Can't open file for mode read.\n");
+    return -1; //can't open file for mode read
+  }
+
+  send_packet(0);
+  strcpy(ans, "");
+  //begin reading file content
+  while(fgets(buf, MAX, rFile) != NULL){
+
+    if((strlen(ans) + strlen(buf)) >= MAX){ //if exceeded packet size (send if over and reset ans)
+      send_packet(0);
+      strcpy(ans, "");
+    }
+    strcat(ans, buf);
+    
+    if(feof(rFile)){ //if reached end of file
+      break;
+    }
+  }
+  send_packet(1);
+  strcpy(ans, "");
+
+  fclose(rFile);
+
+  return 0;
+
+  return 0;
+}
+
 int my_cat(void){
   FILE* rFile; //file to read
   char buf[MAX]; //where file content is read to before send_packet()
@@ -271,8 +314,28 @@ int my_cat(void){
     }
   }
   fclose(rFile);
-
+  printf("\n");
   return 0;
+}
+
+int send_packet(int end){ //takes ans string and writes to client (precondition: Client exists)
+  char buf[MAX]; //hold verify data
+  
+  write(sfd, ans, MAX); //assume client hasn't disconnected
+  printf("SENT PACKET\n");
+  //verify with client data was recieved
+  n = read(sfd, buf, MAX); //get command from client
+  printf("PACKET VERIFIED: %d\n", n);
+  if(end){ //this was the last packet 
+    write(sfd, buf, MAX); //send back verify message
+    printf("LAST PACKET MESSAGE SENT\n");
+  }else{ //there are more packets to send (end == 0)
+    char* n = &buf[0];
+    *n = n+1; //change the verify message to be different
+    
+    write(sfd, buf, MAX); //send back altered verify message
+    printf("MORE PACKETS MESSAGE SENT\n--\n");
+  }
 }
 
 //============================================================================
@@ -283,7 +346,6 @@ int main(int argc, char *argv[], char *env[])
     int n; char how[64];
     int i;
     int route_control; //determines how program will react to (server cmd, client cmd, or get/put)
-    int stdout_copy = dup(1);
     int fd;
     char verify[MAX]; //verification message
     strcpy(verify, "ABC123");
@@ -343,10 +405,33 @@ int main(int argc, char *argv[], char *env[])
       // Send ENTIRE line to server
       n = write(sfd, line, MAX);
 
+      if(route_control == IS_PUT){ //start sending data to server
+        my_put();
+        continue;
+      }
 
-      if(route_control == IS_GET){ //redirect to write to file
-         close(1);
-         fd = open(arg[1], O_WRONLY | O_CREAT, 0644);
+      if(route_control == IS_GET){ 
+        int f_size, bits_read = 0;
+
+        fd = open(arg[1], O_WRONLY | O_CREAT, 0644); //open file for write
+        n = read(sfd, ans, MAX); //get bit size for file
+        f_size = atoi(ans);
+
+        printf("File size: %d\n", f_size);
+        while(bits_read < f_size){
+          n = read(sfd, ans, 1); //get bit size for file
+          
+          if(n == -1){
+            printf("Get could not be completed.\n");
+            break;
+          }
+          //printf("Bits read: %d\n", n);
+          write(fd, ans, 1); //write to filename
+          bits_read += n;
+        }
+      
+        close(fd); //closed
+        printf("Get Complete.\n");
       }
       
       char debug[MAX];
@@ -354,27 +439,14 @@ int main(int argc, char *argv[], char *env[])
 
       // Read packets from sock and show it
       strcpy(ans, ""); //reset ans
-      while(strcmp(debug, verify) != 0){ // server has more to send
-        n = read(sfd, ans, MAX);
-      
-        n = write(sfd, verify, MAX); //verify with server packet was recieved
-        n = read(sfd, debug, MAX); // server sends back verify message if this was the last packet
-        /*
-        if((route_control == IS_GET) && (strcmp(debug, verify) == 0)){ //last packet on get call
-          printf("%s", ans);
-          printf("%c", *(ans + strlen(ans) - 1));
-        }else{
-        */
-        printf("%s", ans);
-        
 
+      while(strstr(ans, "[CMD ") == NULL){ // server has more to send
+        n = read(sfd, ans, MAX);
+  
+        printf("%s", ans);
 
       } //while loops ends with [CMD Successful] or [CMD Unsuccessful]
-      if(route_control == IS_GET){ //close file before returning back to get next cmd
-        close(fd);
-        dup2(stdout_copy, 1);
-        close(stdout_copy);
-      }
+      
   }
 }
 

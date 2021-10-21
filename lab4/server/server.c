@@ -47,7 +47,7 @@ int send_packet(int end);
 
 int lab4_run_command(char* cmd){ // 'main' function that runs lab4
   
-  tokenize(cmd); //tokenize cmd and put into arg[]
+  //tokenize(cmd); //tokenize cmd and put into arg[]
   
   
   strcpy(ans, ""); //resets ans to start building new message that will be send back to client later
@@ -243,63 +243,56 @@ int ls_dir(char* dname){ //takes directory and iterates (and prints) through fil
 
 int my_get(void){
 
+  // Send client the size of the file they are getting =====
+  struct stat st;
+  stat(arg[1], &st);
+  int size = st.st_size;
+  sprintf(ans, "%d", size);
+  send_packet(0);
+  strcpy(ans, "");
+  //=========================================================
+
+
   FILE* rFile; //file to read
   char buf[MAX]; //where file content is read to before send_packet()
   rFile = fopen(arg[1], "r");
+  
 
   if(!rFile){
     strcat(ans, "Error: Can't open file for mode read.\n");
     return -1; //can't open file for mode read
   }
 
-  send_packet(0);
-  strcpy(ans, "");
   //begin reading file content
-  while(fgets(buf, MAX, rFile) != NULL){
+  while(fgets(buf, 2, rFile) != NULL){
 
-    if((strlen(ans) + strlen(buf)) >= MAX){ //if exceeded packet size (send if over and reset ans)
-      send_packet(0);
-      strcpy(ans, "");
-    }
-    strcat(ans, buf);
+    write(cfd, buf, 1); // write only 1 bit
     
     if(feof(rFile)){ //if reached end of file
       break;
     }
   }
-  send_packet(1);
-  strcpy(ans, "");
 
+  strcpy(ans, "");
   fclose(rFile);
 
   return 0;
 }
 
 int send_packet(int end){ //takes ans string and writes to client (precondition: Client exists)
-  char buf[MAX]; //hold verify data
-  
-  printf("%s -- %d\n", ans, strlen(ans));
+
   write(cfd, ans, MAX); //assume client hasn't disconnected
-
-  //verify with client data was recieved
-  n = read(cfd, buf, MAX); //get command from client
-
-  if(end){ //this was the last packet 
-    write(cfd, buf, MAX); //send back verify message
-  }else{ //there are more packets to send (end == 0)
-    char* n = &buf[0];
-    *n = n+1; //change the verify message to be different
-    write(cfd, buf, MAX); //send back altered verify message
-  }
 }
 
 //============================================================================
 
 int main() 
 { 
-    int sfd, len; 
+    int fd, sfd, len; 
     struct sockaddr_in saddr, caddr; 
     int i, length;
+    int stdout_copy = dup(1);
+
     
     printf("1. create a socket\n");
     sfd = socket(AF_INET, SOCK_STREAM, 0); 
@@ -359,19 +352,56 @@ int main()
            close(cfd);
            break;
          }
-         cmd_success = lab4_run_command(line); // custom function to run lab4 code
-         
-         if(strcmp(arg[0], "get") != 0){ //dont send cmd result if command is get
 
-          if(!cmd_success){ //cmd_sucess == 0 when lab4_run_command() encountered no issues
-              strcat(ans, "[CMD Successful]\n");
-          }else{
-              strcat(ans, "[CMD Unsuccessful]\n");
-          }
-           // send the ans to client 
-           n = send_packet(1);
+         tokenize(line);
+
+         if((strcmp(arg[0], "put")) == 0){ // if command is put server starts recieiving client messages
+          
+            char verify[MAX]; //verification message
+            strcpy(verify, "ABC123");
+
+            char debug[MAX];
+            strcpy(debug, "");
+
+            //redirect to pathname
+            close(1);
+            fd = open(arg[1], O_WRONLY | O_CREAT, 0644);
+
+            // Read packets from sock and show it
+            strcpy(ans, ""); //reset ans
+            while(strcmp(debug, verify) != 0){ // server has more to send
+              
+              n = read(sfd, ans, MAX); //read the latest packet
+              n = write(sfd, verify, MAX); //verify with server packet was recieved
+              n = read(sfd, debug, MAX); // server sends back verify message if this was the last packet
+              
+              printf("%s", ans);
+              
+
+            }
+
+            //reset back to stdout
+            close(fd);
+            dup2(stdout_copy, 1);
+            close(stdout_copy);
+
+         }else{
+
+
+            cmd_success = lab4_run_command(line); // custom function to run lab4 code
+
+          
+
+            if(!cmd_success){ //cmd_sucess == 0 when lab4_run_command() encountered no issues
+                strcat(ans, "[CMD Successful]\n");
+            }else{
+                strcat(ans, "[CMD Unsuccessful]\n");
+            }
+            // send the ans to client 
+            n = send_packet(1);
+          
+            printf("server: ready for next request\n");
          }
-         printf("server: ready for next request\n");
        }
     }
 }
