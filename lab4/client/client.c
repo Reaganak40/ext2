@@ -258,38 +258,41 @@ int ls_dir(char* dname){ //takes directory and iterates (and prints) through fil
   return 0;
 }
 
-int my_put(void){
+int my_put(void){ //just get but in reverse
+
+  // Send server the size of the file they are getting =====
+  struct stat st;
+  stat(arg[1], &st);
+  int size = st.st_size;
+  strcpy(ans, "");
+  sprintf(ans, "%d", size);
+  send_packet(0);
+  strcpy(ans, "");
+  //=========================================================
+
 
   FILE* rFile; //file to read
   char buf[MAX]; //where file content is read to before send_packet()
   rFile = fopen(arg[1], "r");
+  
 
   if(!rFile){
     strcat(ans, "Error: Can't open file for mode read.\n");
     return -1; //can't open file for mode read
   }
 
-  send_packet(0);
-  strcpy(ans, "");
   //begin reading file content
-  while(fgets(buf, MAX, rFile) != NULL){
+  while(fgets(buf, 2, rFile) != NULL){
 
-    if((strlen(ans) + strlen(buf)) >= MAX){ //if exceeded packet size (send if over and reset ans)
-      send_packet(0);
-      strcpy(ans, "");
-    }
-    strcat(ans, buf);
+    write(sfd, buf, 1); // write only 1 bit
     
     if(feof(rFile)){ //if reached end of file
       break;
     }
   }
-  send_packet(1);
+
   strcpy(ans, "");
-
   fclose(rFile);
-
-  return 0;
 
   return 0;
 }
@@ -319,23 +322,9 @@ int my_cat(void){
 }
 
 int send_packet(int end){ //takes ans string and writes to client (precondition: Client exists)
-  char buf[MAX]; //hold verify data
-  
+
   write(sfd, ans, MAX); //assume client hasn't disconnected
-  printf("SENT PACKET\n");
-  //verify with client data was recieved
-  n = read(sfd, buf, MAX); //get command from client
-  printf("PACKET VERIFIED: %d\n", n);
-  if(end){ //this was the last packet 
-    write(sfd, buf, MAX); //send back verify message
-    printf("LAST PACKET MESSAGE SENT\n");
-  }else{ //there are more packets to send (end == 0)
-    char* n = &buf[0];
-    *n = n+1; //change the verify message to be different
-    
-    write(sfd, buf, MAX); //send back altered verify message
-    printf("MORE PACKETS MESSAGE SENT\n--\n");
-  }
+  
 }
 
 //============================================================================
@@ -407,7 +396,6 @@ int main(int argc, char *argv[], char *env[])
 
       if(route_control == IS_PUT){ //start sending data to server
         my_put();
-        continue;
       }
 
       if(route_control == IS_GET){ 

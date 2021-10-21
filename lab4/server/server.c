@@ -357,51 +357,48 @@ int main()
 
          if((strcmp(arg[0], "put")) == 0){ // if command is put server starts recieiving client messages
           
-            char verify[MAX]; //verification message
-            strcpy(verify, "ABC123");
+            int f_size, bits_read = 0;
 
-            char debug[MAX];
-            strcpy(debug, "");
+            fd = open(arg[1], O_WRONLY | O_CREAT, 0644); //open file for write
 
-            //redirect to pathname
-            close(1);
-            fd = open(arg[1], O_WRONLY | O_CREAT, 0644);
-
-            // Read packets from sock and show it
-            strcpy(ans, ""); //reset ans
-            while(strcmp(debug, verify) != 0){ // server has more to send
+            n = read(cfd, ans, MAX); //get bit size for file
+            printf("First message: [%d] %s\n", n, ans);
+            f_size = atoi(ans);
+            printf("File size: %d\n", f_size);
+            while(bits_read < f_size){
+              n = read(cfd, ans, 1); //get bit size for file
               
-              n = read(sfd, ans, MAX); //read the latest packet
-              n = write(sfd, verify, MAX); //verify with server packet was recieved
-              n = read(sfd, debug, MAX); // server sends back verify message if this was the last packet
-              
-              printf("%s", ans);
-              
-
+              if(n == -1){
+                printf("Get could not be completed.\n");
+                break;
+              }
+              //printf("Bits read: %d\n", n);
+              write(fd, ans, 1); //write to filename
+              bits_read += n;
             }
+          
+            close(fd); //closed
+            printf("Get Complete.\n");
 
-            //reset back to stdout
-            close(fd);
-            dup2(stdout_copy, 1);
-            close(stdout_copy);
+            cmd_success = 0;
 
          }else{
 
 
             cmd_success = lab4_run_command(line); // custom function to run lab4 code
-
+        }
           
 
-            if(!cmd_success){ //cmd_sucess == 0 when lab4_run_command() encountered no issues
-                strcat(ans, "[CMD Successful]\n");
-            }else{
-                strcat(ans, "[CMD Unsuccessful]\n");
-            }
-            // send the ans to client 
-            n = send_packet(1);
-          
-            printf("server: ready for next request\n");
-         }
+        if(!cmd_success){ //cmd_sucess == 0 when lab4_run_command() encountered no issues
+            strcat(ans, "[CMD Successful]\n");
+        }else{
+            strcat(ans, "[CMD Unsuccessful]\n");
+        }
+        // send the ans to client 
+        n = send_packet(1);
+      
+        printf("server: ready for next request\n");
+         
        }
     }
 }
