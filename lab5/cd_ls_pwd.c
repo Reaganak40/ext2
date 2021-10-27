@@ -8,8 +8,74 @@ int cd()
 
 int ls_file(MINODE *mip, char *name)
 {
-  printf("ls_file: to be done: READ textbook!!!!\n");
+  //printf("ls_file: to be done: READ textbook!!!!\n");
   // READ Chapter 11.7.3 HOW TO ls
+  
+  INODE f_inode;
+  f_inode = mip->INODE;
+
+  u16 mode = f_inode.i_mode;                    // 16 bits mode
+  u16 hard_link_count = f_inode.i_links_count;  // hard link count 
+  u16 uid = f_inode.i_uid;                      // owner uid
+  u16 gid = f_inode.i_gid;                      // the group id by which this file belongs to
+  time_t fmtime = f_inode.i_mtime;                 // file date
+  u32 fsize = f_inode.i_size;                   // size of file
+  char mode_bits[16];
+  mode_bits[16] = '\0';
+  char buf[64];
+
+  // this loop stores the u16 mode as binary (as a string) - but in reverse order
+  for(int i = 0; i < 16; i++){
+    int bit;
+    bit = (mode >> i) & 1;
+    //printf("%d\n", bit);
+    if(bit == 1){
+      mode_bits[i] = '1';
+    }else{
+      mode_bits[i] = '0';
+    }
+  }
+  
+  if(strcmp(mode_bits + 12, "0001") == 0){ // 1000 -> is a REG file
+    printf("-");
+  }else if(strcmp(mode_bits + 12, "0010") == 0){ // 0100 -> is a DIR
+    printf("d");
+  }else{
+      printf("[ERROR: Issue reading file type]");
+
+  }
+  char* permission_bits = "xwrxwrxwr"; //reversed for convenience
+  for(int i = 8; i >= 0; i--){ //read last 8 bits of mode to display permission bits
+    if(mode_bits[i] == '1'){
+      printf("%c", permission_bits[i]);
+    }else if(mode_bits[i] == '0'){
+      printf("-");
+    }else{
+      printf("[ERROR: Issue reading bits]");
+      return -1;
+    }
+  }
+
+  //print hard-link count
+  printf("   %d", hard_link_count);
+
+  //print owner uid
+  printf("   %d", uid);
+
+  //print gruop id
+  printf("   %d", gid);
+
+  // print time in calendar form   
+  strcpy(buf, ctime(&fmtime) + 4); // print time in calendar form  (+4 to ignore day f week)     
+  buf[strlen(buf)-1] = '\0'; // kill \n at end                                 
+  printf("  %s", buf);
+
+  //print file size
+  printf (" %6d", fsize);
+
+  printf("    %s\n", name);
+
+  return 0;
 }
 
 /*****************************************************
@@ -21,7 +87,7 @@ int ls_file(MINODE *mip, char *name)
 *****************************************************/
 int ls_dir(MINODE *mip)
 {
-  printf("ls_dir: list CWD's file names; YOU FINISH IT as ls -l\n");
+  //printf("ls_dir: list CWD's file names; YOU FINISH IT as ls -l\n");
 
   char buf[BLKSIZE], temp[256];
   DIR *dp;
@@ -39,10 +105,10 @@ int ls_dir(MINODE *mip)
      temp[dp->name_len] = 0;
      
      ino = dp->inode; 
-
+     fmip = iget(dev, 2);
      
-
-     printf("%s  ", temp); //print dir name
+    ls_file(fmip, temp);
+     //printf("%s  ", temp); //print dir name
 
      cp += dp->rec_len; //rec_len is entry length in bytes. So, cp will now point to the byte after the end of the file.
      dp = (DIR *)cp;    //dp will now start at cp (the next entry)
@@ -59,7 +125,7 @@ int ls_dir(MINODE *mip)
 *****************************************************/
 int ls()
 {
-  printf("ls: list CWD only! YOU FINISH IT for ls pathname\n");
+  //printf("ls: list CWD only! YOU FINISH IT for ls pathname\n");
   ls_dir(running->cwd); //running process is what "calls" the ls command, get its cwd
 }
 
@@ -68,7 +134,7 @@ char *pwd(MINODE *wd)
   printf("pwd: READ HOW TO pwd in textbook!!!!\n");
   if (wd == root){
     printf("/\n");
-    return;
+    return 0;
   }
 }
 

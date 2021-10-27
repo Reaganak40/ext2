@@ -13,6 +13,10 @@
 #include "type.h"
 
 extern MINODE *iget();
+extern int get_block(int dev, int blk, char *buf);
+int quit();
+extern void iput(MINODE *mip);
+
 
 MINODE minode[NMINODE];
 MINODE *root;
