@@ -177,12 +177,74 @@ int ls_dir(MINODE *mip)
 *  Details: Runs the ls shell command
 * 
 *****************************************************/
-int ls()
+int ls(char* pathname)
 {
   //printf("ls: list CWD only! YOU FINISH IT for ls pathname\n");
-  ls_dir(running->cwd); //running process is what "calls" the ls command, get its cwd
+
+  if(strlen(pathname) == 0){ //no ls pathname
+    ls_dir(running->cwd); //running process is what "calls" the ls command, get its cwd
+    return 0;
+  }
+
+  u32 path_ino;
+  MINODE* mip;
+
+  path_ino = getino(pathname); //returns the inode number for this pathname
+
+  if(!path_ino){ //path doesn't exist
+    return -1;
+  }
+
+  mip = iget(dev, path_ino);     // make a new minode for this path dir
+
+
+   // CHECK IF PATHNAME IS A DIRECTORY ***************************
+  INODE f_inode;
+  f_inode = mip->INODE;
+  u16 mode = f_inode.i_mode;                    // 16 bits mode
+  char mode_bits[16];
+  mode_bits[16] = '\0';
+
+  // this loop stores the u16 mode as binary (as a string) - but in reverse order
+  for(int i = 0; i < 16; i++){
+    int bit;
+    bit = (mode >> i) & 1;
+    //printf("%d\n", bit);
+    if(bit == 1){
+      mode_bits[i] = '1';
+    }else{
+      mode_bits[i] = '0';
+    }
+  }
+  
+  if(strcmp(mode_bits + 12, "0001") == 0){ // 1000 -> is a REG file,  CANT CD TO REF FILE
+    printf("ls: Can't ls a non-directory.\n");
+    iput(mip); //derefrence useless minode to ref file
+    return -1;
+  }else if(strcmp(mode_bits + 12, "0010") == 0){ // 0100 -> is a DIR,  OKAY
+    printf("Pathname is a directory\n");
+  }else{
+      printf("[ERROR: Issue reading file type]");
+      iput(mip); //derefrence useless minode to ref file
+      return -1;
+
+  }
+  //************************************************************
+
+  ls_dir(mip); //run ls_dir on the pathname
+  return 0;
+  
 }
 
+/*****************************************************
+*
+*  Name:    pwd
+*  Made by: Reagan Kelley
+*  Details: Runs the pwd shell command. Recursive 
+*           function that works its way up to the root 
+*           printing the current dir along the way
+* 
+*****************************************************/
 char *pwd(MINODE *wd)
 {
 
