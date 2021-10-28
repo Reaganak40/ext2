@@ -78,9 +78,7 @@ int tokenize(char *pathname)
 *
 *  Name:    iget
 *  Made by: KC
-*  Details: Dev is the disk, this function gets the 
-*           block indicated by (int blk) and puts 
-*           that block info into buf 
+*  Details: Creates new minode with specified inode number
 *
 *****************************************************/
 MINODE *iget(int dev, int ino)
@@ -151,6 +149,16 @@ void iput(MINODE *mip)
  *****************************************************/
 } 
 
+/*****************************************************
+*
+*  Name:    search
+*  Made by: KC
+*  Details: mip is a directory. Search looks through 
+*           the contents of that directory, and if it 
+*           has a file with the specified name, return 
+*           that files inode.
+*
+*****************************************************/
 int search(MINODE *mip, char *name)
 {
    int i; 
@@ -168,6 +176,7 @@ int search(MINODE *mip, char *name)
    cp = sbuf;
    printf("  ino   rlen  nlen  name\n");
 
+   // searches through data block to file dir entry with that name
    while (cp < sbuf + BLKSIZE){
      strncpy(temp, dp->name, dp->name_len);
      temp[dp->name_len] = 0;
@@ -180,7 +189,7 @@ int search(MINODE *mip, char *name)
      cp += dp->rec_len;
      dp = (DIR *)cp;
    }
-   return 0;
+   return 0; //dir name wasn't in directory
 }
 
 int getino(char *pathname)
@@ -192,7 +201,7 @@ int getino(char *pathname)
 
   printf("getino: pathname=%s\n", pathname);
   if (strcmp(pathname, "/")==0)
-      return 2;
+      return 2; //root is 2nd inode
   
   // starting mip = root OR CWD
   if (pathname[0]=='/')
@@ -202,24 +211,25 @@ int getino(char *pathname)
 
   mip->refCount++;         // because we iput(mip) later
   
-  tokenize(pathname);
+  tokenize(pathname); //divide pathname into dir components
 
   for (i=0; i<n; i++){
       printf("===========================================\n");
       printf("getino: i=%d name[%d]=%s\n", i, i, name[i]);
  
-      ino = search(mip, name[i]);
+      ino = search(mip, name[i]); //gets the child for this parent directory with name
 
       if (ino==0){
          iput(mip);
          printf("name %s does not exist\n", name[i]);
          return 0;
       }
+
       iput(mip);
-      mip = iget(dev, ino);
+      mip = iget(dev, ino); // create new minode for that child directory
    }
 
-   iput(mip);
+   iput(mip); //no more reference to inode needed
    return ino;
 }
 
@@ -236,4 +246,49 @@ int findino(MINODE *mip, u32 *myino) // myino = i# of . return i# of ..
   // mip points at a DIR minode
   // WRITE your code here: myino = ino of .  return ino of ..
   // all in i_block[0] of this DIR INODE.
+
+  char buf[BLKSIZE], temp[256];
+  DIR *dp;
+  char *cp;
+
+  u32 parent_ino;
+  int inos_found[2] = { 0 }; // keeps track of inodes found (parent, and my_ino)
+  
+  get_block(dev, mip->INODE.i_block[0], buf); //goes to the data block that holds this directory info
+  dp = (DIR *)buf;  //buf can be read as ext2_dir_entry_2 entries
+  cp = buf;         //will always point to the start of dir_entry
+  
+  //search data block for (dir .) and (dir ..)
+  while (cp < buf + BLKSIZE){
+     strncpy(temp, dp->name, dp->name_len);
+     temp[dp->name_len] = 0;
+     
+     if(strcmp(temp, ".") == 0){ //the dir is . -> its my_ino
+      if(inos_found[1] == 0){ //if my_ino hasn't been found
+            *myino = dp->inode; // return my_ino
+            inos_found[1] = 1; // my_ino found;
+      }
+     }
+
+     if(strcmp(temp, "..") == 0){ //the dir is .. -> its parent_ino
+      if(inos_found[0] == 0){ //if parent ino hasn't been found
+            parent_ino = dp->inode; // return my_ino
+            inos_found[0] = 1; // my_ino found;
+      }
+
+      if(inos_found[0] == 1 && inos_found[1] == 1){ //found all inodes
+         break;
+      }
+     }
+
+     cp += dp->rec_len; //rec_len is entry length in bytes. So, cp will now point to the byte after the end of the file.
+     dp = (DIR *)cp;    //dp will now start at cp (the next entry)
+  }
+
+  if(inos_found[0] == 0){
+        printf("Error: Could not find parent inode.\n");
+        return -1;
+   }
+
+   return parent_ino;
 }

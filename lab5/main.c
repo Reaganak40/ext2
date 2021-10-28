@@ -12,11 +12,12 @@
 
 #include "type.h"
 
+// functions used from other source files *******
 extern MINODE *iget();
 extern int get_block(int dev, int blk, char *buf);
-int quit();
 extern void iput(MINODE *mip);
-
+// *********************************************
+int quit(); //local function defintion
 
 MINODE minode[NMINODE];
 MINODE *root;
@@ -137,7 +138,7 @@ int main(int argc, char *argv[ ])
     if (strcmp(cmd, "ls")==0)
        ls();
     else if (strcmp(cmd, "cd")==0)
-       cd();
+       cd(pathname);
     else if (strcmp(cmd, "pwd")==0)
        pwd(running->cwd);
     else if (strcmp(cmd, "quit")==0)

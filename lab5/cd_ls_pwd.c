@@ -1,9 +1,62 @@
 /************* cd_ls_pwd.c file **************/
-int cd()
-{
-  printf("cd: under construction READ textbook!!!!\n");
 
-  // READ Chapter 11.7.3 HOW TO chdir
+// functions used from other source files *******
+extern int findino(MINODE *mip, u32 *myino);
+int getino(char *pathname);
+//***********************************************
+
+int cd(char *pathname)
+{
+  //printf("cd: under construction READ textbook!!!!\n");
+  int ino = getino(pathname); //get inode number for pathname
+  
+  if(!ino){ // directory path could not be found
+    printf("cd: pathname does not exist!\n");
+    return -1;
+  }
+
+
+  MINODE* mip = iget(dev, ino); //create a new minode with the inode for that pathname
+
+  // CHECK IF PATHNAME IS A DIRECTORY ***************************
+  INODE f_inode;
+  f_inode = mip->INODE;
+  u16 mode = f_inode.i_mode;                    // 16 bits mode
+  char mode_bits[16];
+  mode_bits[16] = '\0';
+
+  // this loop stores the u16 mode as binary (as a string) - but in reverse order
+  for(int i = 0; i < 16; i++){
+    int bit;
+    bit = (mode >> i) & 1;
+    //printf("%d\n", bit);
+    if(bit == 1){
+      mode_bits[i] = '1';
+    }else{
+      mode_bits[i] = '0';
+    }
+  }
+  
+  if(strcmp(mode_bits + 12, "0001") == 0){ // 1000 -> is a REG file,  CANT CD TO REF FILE
+    printf("cd: Can't change directory to a non-directory.\n");
+    iput(mip); //derefrence useless minode to ref file
+    return -1;
+  }else if(strcmp(mode_bits + 12, "0010") == 0){ // 0100 -> is a DIR,  OKAY
+    printf("Pathname is a directory\n");
+  }else{
+      printf("[ERROR: Issue reading file type]");
+      iput(mip); //derefrence useless minode to ref file
+      return -1;
+
+  }
+  //************************************************************
+
+
+  iput(running->cwd);           // one less reference to old cwd
+  running->cwd = mip; //finalize directory change
+
+  return 0;
+
 }
 
 int ls_file(MINODE *mip, char *name)
@@ -105,7 +158,7 @@ int ls_dir(MINODE *mip)
      temp[dp->name_len] = 0;
      
      ino = dp->inode; 
-     fmip = iget(dev, 2);
+     fmip = iget(dev, ino);
      
     ls_file(fmip, temp);
      //printf("%s  ", temp); //print dir name
@@ -131,11 +184,15 @@ int ls()
 
 char *pwd(MINODE *wd)
 {
+
+  u32 my_ino, parent_ino;
   printf("pwd: READ HOW TO pwd in textbook!!!!\n");
   if (wd == root){
     printf("/\n");
     return 0;
   }
+
+  parent_ino = findino(wd, &my_ino);
 }
 
 
