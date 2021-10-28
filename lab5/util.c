@@ -239,8 +239,46 @@ int findmyname(MINODE *parent, u32 myino, char myname[ ])
   // WRITE YOUR code here
   // search parent's data block for myino; SAME as search() but by myino
   // copy its name STRING to myname[ ]
+
+  int i; 
+  char *cp, c, sbuf[BLKSIZE], temp[256];
+
+   ip = &(parent->INODE);
+
+   /*** search for name in mip's data blocks: ASSUME i_block[0] ONLY ***/
+
+   get_block(dev, ip->i_block[0], sbuf);
+   dp = (DIR *)sbuf;
+   cp = sbuf;
+
+   // searches through data block to file dir entry with that name
+   while (cp < sbuf + BLKSIZE){
+
+     
+     
+     if(dp->inode == myino){ //if dir's inode is myino -> this is the file we are looking for
+         strncpy(myname, dp->name, dp->name_len); //get the name of file
+         myname[dp->name_len] = 0;
+         return 0;
+     }
+     
+     cp += dp->rec_len;
+     dp = (DIR *)cp;
+   }
+   printf("(findmyname) : name could not be found in directory\n");
+   return -1; //dir name wasn't in directory
+
 }
 
+/*****************************************************
+*
+*  Name:    findino
+*  Made by: KC
+*  Details: mip is a directory, myino is changed to 
+*           the . directory inode number. 
+*           The .. directory inode number is returned.
+*
+*****************************************************/
 int findino(MINODE *mip, u32 *myino) // myino = i# of . return i# of ..
 {
   // mip points at a DIR minode

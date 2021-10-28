@@ -2,7 +2,8 @@
 
 // functions used from other source files *******
 extern int findino(MINODE *mip, u32 *myino);
-int getino(char *pathname);
+extern int getino(char *pathname);
+extern int findmyname(MINODE *parent, u32 myino, char myname[ ]);
 //***********************************************
 
 int cd(char *pathname)
@@ -119,7 +120,7 @@ int ls_file(MINODE *mip, char *name)
   printf("   %d", gid);
 
   // print time in calendar form   
-  strcpy(buf, ctime(&fmtime) + 4); // print time in calendar form  (+4 to ignore day f week)     
+  strcpy(buf, ctime(&fmtime) + 4); // print time in calendar form  (+4 to ignore day of week)     
   buf[strlen(buf)-1] = '\0'; // kill \n at end                                 
   printf("  %s", buf);
 
@@ -186,13 +187,44 @@ char *pwd(MINODE *wd)
 {
 
   u32 my_ino, parent_ino;
-  printf("pwd: READ HOW TO pwd in textbook!!!!\n");
+  MINODE* pip;
+  char name[64];
+  char* pwd_return_value;
+
+  
   if (wd == root){
-    printf("/\n");
+    printf("/");
+
+    if(wd == running->cwd){ //this was the last dir in the chain
+      printf("\n");
+    }
+
     return 0;
   }
 
-  parent_ino = findino(wd, &my_ino);
+  parent_ino = findino(wd, &my_ino); //my_ino is this file's inode number. Parent inode is the parent directory of this file
+
+  pip = iget(dev, parent_ino);       //pip becomes the minode for parent directory
+
+  pwd_return_value = pwd(pip); // start working way back up to root
+
+  findmyname(pip, my_ino, name); //get the name of myino
+
+  if(pwd_return_value != 0){ //if the parent dir is not root
+    printf("/");
+  }
+  printf("%s", name);
+
+  if(wd == running->cwd){ //this was the last dir in the chain
+    printf("\n");
+  }
+
+  return (char*)1;
+
+
+
+
+  
 }
 
 
