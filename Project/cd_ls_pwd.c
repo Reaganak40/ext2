@@ -4,6 +4,7 @@
 extern int findino(MINODE *mip, u32 *myino);
 extern int getino(char *pathname);
 extern int findmyname(MINODE *parent, u32 myino, char myname[ ]);
+extern int is_dir(MINODE* mip);
 //***********************************************
 
 int cd(char *pathname)
@@ -19,38 +20,10 @@ int cd(char *pathname)
 
   MINODE* mip = iget(dev, ino); //create a new minode with the inode for that pathname
 
-  // CHECK IF PATHNAME IS A DIRECTORY ***************************
-  INODE f_inode;
-  f_inode = mip->INODE;
-  u16 mode = f_inode.i_mode;                    // 16 bits mode
-  char mode_bits[16];
-  mode_bits[16] = '\0';
-
-  // this loop stores the u16 mode as binary (as a string) - but in reverse order
-  for(int i = 0; i < 16; i++){
-    int bit;
-    bit = (mode >> i) & 1;
-    //printf("%d\n", bit);
-    if(bit == 1){
-      mode_bits[i] = '1';
-    }else{
-      mode_bits[i] = '0';
-    }
-  }
-  
-  if(strcmp(mode_bits + 12, "0001") == 0){ // 1000 -> is a REG file,  CANT CD TO REF FILE
-    printf("cd: Can't change directory to a non-directory.\n");
-    iput(mip); //derefrence useless minode to ref file
+  if(is_dir(mip) != 0){
+    printf("can't cd to a non-directory\n");
     return -1;
-  }else if(strcmp(mode_bits + 12, "0010") == 0){ // 0100 -> is a DIR,  OKAY
-    printf("Pathname is a directory\n");
-  }else{
-      printf("[ERROR: Issue reading file type]");
-      iput(mip); //derefrence useless minode to ref file
-      return -1;
-
   }
-  //************************************************************
 
 
   iput(running->cwd);           // one less reference to old cwd
@@ -128,6 +101,8 @@ int ls_file(MINODE *mip, char *name)
   printf (" %6d", fsize);
 
   printf("    %s\n", name);
+  //printf("MODE: %d\n", mode);
+
 
   return 0;
 }
@@ -198,38 +173,10 @@ int ls(char* pathname)
   mip = iget(dev, path_ino);     // make a new minode for this path dir
 
 
-   // CHECK IF PATHNAME IS A DIRECTORY ***************************
-  INODE f_inode;
-  f_inode = mip->INODE;
-  u16 mode = f_inode.i_mode;                    // 16 bits mode
-  char mode_bits[16];
-  mode_bits[16] = '\0';
-
-  // this loop stores the u16 mode as binary (as a string) - but in reverse order
-  for(int i = 0; i < 16; i++){
-    int bit;
-    bit = (mode >> i) & 1;
-    //printf("%d\n", bit);
-    if(bit == 1){
-      mode_bits[i] = '1';
-    }else{
-      mode_bits[i] = '0';
-    }
-  }
-  
-  if(strcmp(mode_bits + 12, "0001") == 0){ // 1000 -> is a REG file,  CANT CD TO REF FILE
-    printf("ls: Can't ls a non-directory.\n");
-    iput(mip); //derefrence useless minode to ref file
+  if(is_dir(mip) != 0){ //pathname is not a directory
+    printf("cant ls a non-directory\n");
     return -1;
-  }else if(strcmp(mode_bits + 12, "0010") == 0){ // 0100 -> is a DIR,  OKAY
-    printf("Pathname is a directory\n");
-  }else{
-      printf("[ERROR: Issue reading file type]");
-      iput(mip); //derefrence useless minode to ref file
-      return -1;
-
   }
-  //************************************************************
 
   ls_dir(mip); //run ls_dir on the pathname
   return 0;
