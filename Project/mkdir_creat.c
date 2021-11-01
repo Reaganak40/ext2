@@ -4,7 +4,7 @@
 int tst_bit(char *buf, int bit); // in Chapter 11.3.1
 int set_bit(char *buf, int bit);// in Chapter 11.3.1
 int my_mkdir(MINODE* mip, char* _basename);
-int init_dir(int dblk, int pino);
+int init_dir(int dblk, int pino, int ino);
 // **********************************************************
 
 extern int put_block(int dev, int blk, char *buf);
@@ -229,7 +229,7 @@ int my_mkdir(MINODE* pmip, char* _basename){
     iput(mip); //write inode to disk
     //*****************************
 
-    init_dir(mip->INODE.i_block[0], ino); // initialize dir entries in data block
+    init_dir(mip->INODE.i_block[0], pmip->ino, ino); // initialize dir entries in data block
     enter_name(pmip, ino, _basename); // add new directory to parent directory data block
 
     //increment parent indoes link count by 1 and mark pmip dirty
@@ -241,7 +241,7 @@ int my_mkdir(MINODE* pmip, char* _basename){
     return 0;
 }
 
-int init_dir(int dblk, int pino){ //based on pg 332
+int init_dir(int dblk, int pino, int ino){ //based on pg 332
 
     char buf[BLKSIZE];
     DIR *dp;
@@ -253,7 +253,7 @@ int init_dir(int dblk, int pino){ //based on pg 332
 
 
     // make . entry
-    dp->inode = pino;
+    dp->inode = ino;
     dp->rec_len = 12; // ideal length = 4 * [ (8 * name_length + 3) / 4]
     dp->name_len = 1;
     dp->name[0] = '.';
