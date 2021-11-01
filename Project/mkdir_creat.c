@@ -185,7 +185,7 @@ int mkdir_pathname(char* pathname){
     if(strlen(dirname)){ //if a dirname was given
         pino = getino(dirname); //get the inode number for the parent directory
 
-        if(!pino){
+        if(!pino){ //dirname does not exist
             printf("mkdir unsuccessful\n");
             return -1;
         }
@@ -209,6 +209,7 @@ int mkdir_pathname(char* pathname){
 
     //all checks made, safe to mkdir
     
+    printf("mkdir dirname and basename safe, preparing mkdir ...\n");
     return my_mkdir(pmip, _basename); 
 }
 
@@ -240,7 +241,7 @@ int my_mkdir(MINODE* pmip, char* _basename){
     return 0;
 }
 
-int init_dir(int dblk, int pino){
+int init_dir(int dblk, int pino){ //based on pg 332
 
     char buf[BLKSIZE];
     DIR *dp;
@@ -253,7 +254,7 @@ int init_dir(int dblk, int pino){
 
     // make . entry
     dp->inode = pino;
-    dp->rec_len = 12;
+    dp->rec_len = 12; // ideal length = 4 * [ (8 * name_length + 3) / 4]
     dp->name_len = 1;
     dp->name[0] = '.';
     // make .. entry: pino=parent DIR ino, blk=allocated block
@@ -261,6 +262,7 @@ int init_dir(int dblk, int pino){
     cp += dp->rec_len; //rec_len is entry length in bytes. So, cp will now point to the byte after the end of the file.
     dp = (DIR *)cp;    //dp will now start at cp (the next entry)
 
+    // make .. entry
     dp->inode = pino;
     dp->rec_len = BLKSIZE-12; // rec_len spans block
     dp->name_len = 2;
