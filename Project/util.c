@@ -158,6 +158,18 @@ void iput(MINODE *mip)
 
   Write YOUR code here to write INODE back to disk
  *****************************************************/
+
+   block = (mip->ino - 1) / 8 + iblk; //get the block number that contains this inode
+   offset = (mip->ino - 1) % 8; // which inode in the block this inode is
+
+   get_block(dev, block, buf); // start reading at inode block
+   ip = (INODE*)buf + offset; // ip is the inode we are looking for
+
+   *ip = mip->INODE; // overwrite inode
+   put_block(dev, block, buf); //write new changes back to block
+
+   //midalloc
+   
 } 
 
 /*****************************************************
