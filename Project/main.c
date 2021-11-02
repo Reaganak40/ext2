@@ -67,7 +67,13 @@ int init()
   }
 }
 
-// load root INODE and set root pointer to it
+/*****************************************************
+*
+*  Name:    mount root
+*  Made by: KC
+*  Details: load root INODE and set root pointer to it
+*
+*****************************************************/
 int mount_root()
 {  
   printf("mount_root()\n");

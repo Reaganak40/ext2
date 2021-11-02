@@ -5,6 +5,7 @@ int tst_bit(char *buf, int bit); // in Chapter 11.3.1
 int set_bit(char *buf, int bit);// in Chapter 11.3.1
 int my_mkdir(MINODE* mip, char* _basename);
 int init_dir(int dblk, int pino, int ino);
+int enter_name(MINODE* pip, int ino, char* name);
 // **********************************************************
 
 extern int put_block(int dev, int blk, char *buf);
@@ -13,8 +14,7 @@ extern int getino(char *pathname);
 extern MINODE *iget(int dev, int ino);
 extern int search(MINODE *mip, char *name);
 extern MINODE *iget(int dev, int ino);
-extern int enter_name(MINODE* pip, int ino, char* name);
-int create_inode(INODE* ip, int bno);
+extern int create_inode(INODE* ip, int bno);
 
 
 
@@ -23,7 +23,13 @@ extern int n;
 extern char *name[64];
 extern int nblocks, ninodes, bmap, imap;
 
-
+/*****************************************************
+*
+*  Name:    is_dir
+*  Made by: Reagan
+*  Details: Returns 0 if mip is a directory
+*
+*****************************************************/
 int is_dir(MINODE* mip){
   // CHECK IF mip IS A DIRECTORY ***************************
   INODE f_inode;
@@ -61,7 +67,14 @@ int is_dir(MINODE* mip){
   return 0;
 }
 
-
+/*****************************************************
+*
+*  Name:    ialloc
+*  Made by: KC
+*  Details: Goes the the inode bitmap block and 
+*           allocates a new inode for use
+*
+*****************************************************/
 int ialloc(int dev)  // allocate an inode number from inode_bitmap
 {
   int  i;
@@ -81,6 +94,14 @@ int ialloc(int dev)  // allocate an inode number from inode_bitmap
   return 0;
 }
 
+/*****************************************************
+*
+*  Name:    balloc
+*  Made by: Reagan
+*  Details: Goes the the block bitmap block and allocates 
+*           a new block in the disk for use.
+*
+*****************************************************/
 int balloc(int dev){ //same as ialloc but for the block bitmap
 
   int  i;
@@ -100,6 +121,15 @@ int balloc(int dev){ //same as ialloc but for the block bitmap
 
     return 0;
 }
+
+/*****************************************************
+*
+*  Name:    test bit
+*  Made by: Reagan
+*  Details: Returns the bit at that point in the block 
+*           (1 or 0)
+*
+*****************************************************/
 int tst_bit(char *buf, int bit){ // in Chapter 11.3.1
 
     int i,j;
@@ -124,6 +154,14 @@ int tst_bit(char *buf, int bit){ // in Chapter 11.3.1
     return 0;
 }
 
+/*****************************************************
+*
+*  Name:    set bit
+*  Made by: Reagan
+*  Details: Sets the bit at that location in the 
+*           block to a 1
+*
+*****************************************************/
 int set_bit(char *buf, int bit){ // in Chapter 11.3.1
 
     int i,j;
@@ -148,6 +186,15 @@ int set_bit(char *buf, int bit){ // in Chapter 11.3.1
     return 0;
 }
 
+/*****************************************************
+*
+*  Name:    mkdir pathname
+*  Made by: Reagan
+*  Details: Determines if mkdir works for the given 
+*           pathname. If there is no repeated basenames
+*           and the dirname is valid call my_mkdir
+*
+*****************************************************/
 int mkdir_pathname(char* pathname){
 
     //divide pathname into dirname and basename
@@ -213,6 +260,16 @@ int mkdir_pathname(char* pathname){
     return my_mkdir(pmip, _basename); 
 }
 
+/*****************************************************
+*
+*  Name:    my mkdir
+*  Made by: Reagan
+*  Details: The main mkdir function. Runs the mkdir 
+*           command in the parent directory (pmip), 
+*           initialzes the inodes and sets the dir 
+*           entries
+*
+*****************************************************/
 int my_mkdir(MINODE* pmip, char* _basename){
     int ino, blk;
     MINODE* mip;
@@ -241,6 +298,15 @@ int my_mkdir(MINODE* pmip, char* _basename){
     return 0;
 }
 
+/*****************************************************
+*
+*  Name:    init dir
+*  Made by: Reagan
+*  Details: Sets the basic dir entries for a new 
+*           directory, that being the . and .. directory 
+*           paths
+*
+*****************************************************/
 int init_dir(int dblk, int pino, int ino){ //based on pg 332
 
     char buf[BLKSIZE];
@@ -268,5 +334,99 @@ int init_dir(int dblk, int pino, int ino){ //based on pg 332
     dp->name_len = 2;
     dp->name[0] = dp->name[1] = '.';
     put_block(dev, dblk, buf); // write to blk on diks
+
+}
+
+/*****************************************************
+*
+*  Name:    enter name
+*  Made by: Reagan Kelley
+*  Details: Adds the new directory to the parent 
+*           directory's data block. Trims the last dir 
+*           entry, and either adds the new dir entry to 
+*           the last data block or to a new one if there 
+*           is no more room in the current data block
+*
+*****************************************************/
+int enter_name(MINODE* pip, int ino, char* name){
+
+   INODE inode;
+   inode = pip->INODE;
+   DIR *dp;
+   char *cp;
+   
+   char buf[BLKSIZE];
+   int last_used_iblock = -1;
+   int ideal_length, need_length, remain;
+
+
+   //get the last used iblock
+   for(int i = 0; i < 12; i++){ // 12 direct blocks
+      if(inode.i_block[i] == 0){ 
+         last_used_iblock = i - 1;
+         break;
+      }
+   }
+
+   if(last_used_iblock == -1){ //this happens if i_block[0] is not initalied or all 12 blocks are used
+      printf("enter_name : i_block could not be identifed");
+      return -1;
+   }
+
+   //get the data block
+   get_block(dev, inode.i_block[last_used_iblock], buf);
+
+   dp = (DIR*)buf;
+   cp = buf;
+
+   while(cp + dp->rec_len < buf + BLKSIZE){ //traverse data block until at last entry
+      cp += dp->rec_len;
+      dp = (DIR*)cp;
+   }
+
+   ideal_length = 4 * ( (8 + dp->name_len + 3) / 4); //last dirs ideal length
+   remain = dp->rec_len - ideal_length; //what will remain of the data block after last dir entry is trimmed
+   need_length = 4 * ( (8 + strlen(name) + 3) / 4); // how much is needed for the newn entry
+
+   if(remain >= need_length){ //there is room in the data block for the new dir entry
+      dp->rec_len = ideal_length; //trim the last dir entry
+      
+      cp += dp->rec_len;
+      dp = (DIR*)cp;
+
+      dp->inode = ino;
+      dp->rec_len = (buf + BLKSIZE) - cp; //goes to the end of the block
+      dp->name_len = strlen(name);
+      strcpy(dp->name, name); //there is a null character at the end of this but it does not matter since it wont overwrite important data
+
+      put_block(dev, inode.i_block[last_used_iblock], buf);
+
+      return 0;
+   }
+
+   // new dir entry won't fit in the last data block
+   int blk;
+   
+   if(last_used_iblock + 1 >= 12){ //all 12 direct blocks used
+      printf("enter name : no more space for direct iblocks (reached 12)\n");
+      return -1;
+   }
+
+   blk = balloc(dev); // get the newly allocated block number
+   inode.i_block[last_used_iblock + 1] = blk;
+
+   //get the new data block
+   get_block(dev, blk, buf); // NOTE: no need to write back earlier buf because no changes were made
+
+   dp = (DIR*)buf;
+
+   dp->inode = ino;
+   dp->rec_len = BLKSIZE; //goes to the end of the block
+   dp->name_len = strlen(name);
+   strcpy(dp->name, name); //there is a null character at the end of this but it does not matter since it wont overwrite important data
+
+   put_block(dev, blk, buf);
+
+   return 0;
 
 }

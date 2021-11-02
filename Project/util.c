@@ -63,6 +63,15 @@ int put_block(int dev, int blk, char *buf)
    write(dev, buf, BLKSIZE);
 }   
 
+/*****************************************************
+*
+*  Name:    tokenize
+*  Made by: KC
+*  Details: Seperates a pathname into its individual 
+*           directory name components and puts it in 
+*           the list name, N becomes the number of tokens.
+*
+*****************************************************/
 int tokenize(char *pathname)
 {
   int i;
@@ -136,6 +145,14 @@ MINODE *iget(int dev, int ino)
   return 0;
 }
 
+/*****************************************************
+*
+*  Name:    iput
+*  Made by: Reagan
+*  Details: Writes mip's inode back to the disk and 
+*           deallocates the minode
+*
+*****************************************************/
 void iput(MINODE *mip)
 {
  int i, block, offset;
@@ -265,6 +282,15 @@ int getino(char *pathname)
 }
 
 // These 2 functions are needed for pwd()
+
+/*****************************************************
+*
+*  Name:    findmyname
+*  Made by: Reagan
+*  Details: Gets the name of the file with the given inode number. 
+*           The file must be a child of the parent directory.
+*
+*****************************************************/
 int findmyname(MINODE *parent, u32 myino, char myname[ ]) 
 {
   // WRITE YOUR code here
@@ -362,89 +388,15 @@ int findino(MINODE *mip, u32 *myino) // myino = i# of . return i# of ..
    return parent_ino;
 }
 
-int enter_name(MINODE* pip, int ino, char* name){
-
-   INODE inode;
-   inode = pip->INODE;
-   DIR *dp;
-   char *cp;
-   
-   char buf[BLKSIZE];
-   int last_used_iblock = -1;
-   int ideal_length, need_length, remain;
-
-
-   //get the last used iblock
-   for(int i = 0; i < 12; i++){ // 12 direct blocks
-      if(inode.i_block[i] == 0){ 
-         last_used_iblock = i - 1;
-         break;
-      }
-   }
-
-   if(last_used_iblock == -1){ //this happens if i_block[0] is not initalied or all 12 blocks are used
-      printf("enter_name : i_block could not be identifed");
-      return -1;
-   }
-
-   //get the data block
-   get_block(dev, inode.i_block[last_used_iblock], buf);
-
-   dp = (DIR*)buf;
-   cp = buf;
-
-   while(cp + dp->rec_len < buf + BLKSIZE){ //traverse data block until at last entry
-      cp += dp->rec_len;
-      dp = (DIR*)cp;
-   }
-
-   ideal_length = 4 * ( (8 + dp->name_len + 3) / 4); //last dirs ideal length
-   remain = dp->rec_len - ideal_length; //what will remain of the data block after last dir entry is trimmed
-   need_length = 4 * ( (8 + strlen(name) + 3) / 4); // how much is needed for the newn entry
-
-   if(remain >= need_length){ //there is room in the data block for the new dir entry
-      dp->rec_len = ideal_length; //trim the last dir entry
-      
-      cp += dp->rec_len;
-      dp = (DIR*)cp;
-
-      dp->inode = ino;
-      dp->rec_len = (buf + BLKSIZE) - cp; //goes to the end of the block
-      dp->name_len = strlen(name);
-      strcpy(dp->name, name); //there is a null character at the end of this but it does not matter since it wont overwrite important data
-
-      put_block(dev, inode.i_block[last_used_iblock], buf);
-
-      return 0;
-   }
-
-   // new dir entry won't fit in the last data block
-   int blk;
-   
-   if(last_used_iblock + 1 >= 12){ //all 12 direct blocks used
-      printf("enter name : no more space for direct iblocks (reached 12)\n");
-      return -1;
-   }
-
-   blk = balloc(dev); // get the newly allocated block number
-   inode.i_block[last_used_iblock + 1] = blk;
-
-   //get the new data block
-   get_block(dev, blk, buf); // NOTE: no need to write back earlier buf because no changes were made
-
-   dp = (DIR*)buf;
-
-   dp->inode = ino;
-   dp->rec_len = BLKSIZE; //goes to the end of the block
-   dp->name_len = strlen(name);
-   strcpy(dp->name, name); //there is a null character at the end of this but it does not matter since it wont overwrite important data
-
-   put_block(dev, blk, buf);
-
-   return 0;
-
-}
-
+/*****************************************************
+*
+*  Name:    create inode
+*  Made by: Reagan
+*  Details: initilizes inode ip as a directory, bno the 
+*           is the first data black in i_blocks. It is 
+*           allocated before-hand
+*
+*****************************************************/
 int create_inode(INODE* ip, int bno){ //from book pg 334
 
    ip->i_mode = 0x41ED; // 040755: DIR type and permissions
