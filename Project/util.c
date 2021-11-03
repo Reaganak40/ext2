@@ -228,6 +228,7 @@ int search(MINODE *mip, char *name)
      }
      cp += dp->rec_len;
      dp = (DIR *)cp;
+     
    }
    return 0; //dir name wasn't in directory
 }

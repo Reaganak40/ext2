@@ -37,12 +37,33 @@ int idalloc(int dev, int ino)
 
 int bdalloc(int dev, int blk){
 
+    int i;  
+    char buf[BLKSIZE];
+
+    if (blk > nblocks){  
+      printf("inumber %d out of range\n", blk);
+      return -1;
+    }
+  
+    get_block(dev, bmap, buf);  // get block bitmap block into buf[]
+  
+    clr_bit(buf, blk);        // clear block bit
+
+    put_block(dev, imap, buf);  // write buf back
+
     return 0;
 }
 
 
 int clr_bit(char* buf, int bit){
+  int i,j;
 
+  i = bit / 8; // what n byte in buf this bit belongs to (8 bits in a byte)
+  j = bit % 8; // which nth bit this bit belongs to in the i'th byte.
+
+  buf[i] &= ~(1 << j);
+
+  return 0;
 }
 
 int rmdir_pathname(char* pathname){
@@ -55,6 +76,12 @@ int rmdir_pathname(char* pathname){
     
     //get the in-memory inode of pathname
     ino = getino(pathname); //inode number of pathname
+
+    if(!ino){ //if pathname does not lead anywhere
+      printf("rmdir unsuccessful\n");
+      return -1;
+    }
+
     mip = iget(dev, ino);   // put inode in a new minode
 
     if(is_dir(mip) != 0){ //if mip is not a directory
@@ -83,7 +110,10 @@ int rmdir_pathname(char* pathname){
     pmip = iget(dev, pino);    //pmip now carries parent inode
 
     findmyname(pmip, ino, fname); // get name of dir to remove
-    rm_child(pmip, name);         // remove child from parent directory
+    if(rm_child(pmip, fname) != 0){ // remove child from parent directory, 0 means successful
+      printf("rmdir unsuccessful\n");
+      return -1;
+    }         
 
     //decrement parent indoes link count by 1 and mark pmip dirty
     pmip->dirty = 1;
@@ -98,6 +128,105 @@ int rmdir_pathname(char* pathname){
 
 }
 
-int rm_child(MINODE* pmip, char* name){
+int rm_child(MINODE* pmip, char* fname){
+    
+    INODE inode;
+    inode = pmip->INODE;
+    
+    char buf[BLKSIZE], temp[256];
+    DIR *dp, *ldp;
+    char *cp, *lcp;
 
+    int last_used_iblock = -1;
+    //get the last used iblock
+    for(int i = 0; i < 12; i++){ // 12 direct blocks
+      if(inode.i_block[i] == 0){ 
+         last_used_iblock = i - 1;
+         break;
+      }
+    }
+
+    if(last_used_iblock == -1){ //this happens if i_block[0] is not initalied or all 12 blocks are used
+      printf("rm_child : i_block could not be identifed");
+      return -1;
+    }
+
+    // find dir entry name in parent
+
+    for(int i = 0; i <= last_used_iblock; i++){ //traverse the used iblocks
+      get_block(dev, inode.i_block[i], buf); // look at the next used data block 
+
+      dp = (DIR*)buf;
+      cp = buf;
+
+      //traverse the current data block
+      while (cp < buf + BLKSIZE){
+        strncpy(temp, dp->name, dp->name_len); //copy the name of the dir entry
+        temp[dp->name_len] = 0;
+
+        if(strcmp(fname, temp) == 0){ //if the fname and dir entry name match -> this is the dir entry we are looking for
+          
+          if(dp->rec_len == BLKSIZE){ //condition 1: first and only entry in a data block
+            bdalloc(dev, inode.i_block[i]); //deallocate the data block
+
+            pmip->INODE.i_block[i] = 0; // derefrence data block from i_blocks
+            
+            for(int j = i + 1; j <= last_used_iblock; j++){ //compact i_block array to elimated deleted entry if its between nonzero entries
+              if(pmip->INODE.i_block[j] != 0){ //if the next i block is assigned
+                printf("rm_child : reformatting parent i_blocks...\n");
+                pmip->INODE.i_block[j - 1] = pmip->INODE.i_block[j]; //overwrite the previous i_block value with this one
+                pmip->INODE.i_block[j] = 0; //overwrite the i_block value with 0, since its moved in the array
+
+              }else{
+                break; //happens once a 0 i_block is found, inidicates no more i_blocks to find
+              }
+            }
+
+            //iput(pmip); //write inode back to block
+
+            return 0; //condition 1 complete
+
+          }else if(dp->rec_len == (buf + BLKSIZE) - cp){ // condition 2: dir entry is last in the data block
+
+            ldp->rec_len = (buf + BLKSIZE) - lcp; //extend the last dir entry to the end of the block (this will stop the removed dir entry from being read)
+            put_block(dev, inode.i_block[i], buf); //write back changes to the data block
+
+            return 0; //condition 2 complete
+          
+          }else{ //condition 3: dir entry is in the beginning or middle of the block
+
+            int szd_length = dp->rec_len; // in case dp gets overwritten
+            while (szd_length != (buf + BLKSIZE) - cp){ //go until the last dir entry in the block is found
+
+              lcp = cp; //save last cp loc
+              cp += szd_length;
+              ldp = dp; //save the last dir entry loc
+              dp = (DIR *)cp;
+              szd_length = dp->rec_len; //save rec_len before cpy
+              memcpy(lcp, cp, dp->rec_len); //move one dir entry to the left
+
+            }
+
+            dp = (DIR*)lcp; // point to the moved location of the last dir entry in the block
+            dp->rec_len = (buf + BLKSIZE) - lcp; //resize the rec_len which spans to the end of the block 
+            //NOTE: it will be bigger now since a dir entry was removed
+
+            put_block(dev, inode.i_block[i], buf); //write back changes to the data block
+
+            return 0; //condition 3 complete
+
+
+          }
+        }
+        
+        //go to the next dir entry
+        lcp = cp; //save last cp loc
+        cp += dp->rec_len;
+        ldp = dp; //save the last dir entry loc
+        dp = (DIR *)cp;
+      }
+    }
+
+    printf("rm_child : no dir entry was removed ...");
+    return -1;
 }
