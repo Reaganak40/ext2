@@ -137,7 +137,7 @@ int rm_child(MINODE* pmip, char* fname){
     DIR *dp, *ldp;
     char *cp, *lcp;
 
-    int last_used_iblock = -1;
+    int last_used_iblock = -1, old_diff;
     //get the last used iblock
     for(int i = 0; i < 12; i++){ // 12 direct blocks
       if(inode.i_block[i] == 0){ 
@@ -194,22 +194,32 @@ int rm_child(MINODE* pmip, char* fname){
             return 0; //condition 2 complete
           
           }else{ //condition 3: dir entry is in the beginning or middle of the block
+            lcp = cp;
+            ldp = dp; //keep the deleted dir location
+            while (dp->rec_len != (buf + BLKSIZE) - cp){ //go until the last dir entry in the block is found
 
-            int szd_length = dp->rec_len; // in case dp gets overwritten
-            while (szd_length != (buf + BLKSIZE) - cp){ //go until the last dir entry in the block is found
-
-              lcp = cp; //save last cp loc
-              cp += szd_length;
-              ldp = dp; //save the last dir entry loc
+              cp += dp->rec_len; //go to the next dir entry
               dp = (DIR *)cp;
-              szd_length = dp->rec_len; //save rec_len before cpy
-              memcpy(lcp, cp, dp->rec_len); //move one dir entry to the left
+              
+
+            }
+            printf("Try memcpy\n");
+            
+            old_diff = ldp->rec_len; // keep track of how much space the old dir used to take in the block
+
+            memcpy(ldp, lcp + ldp->rec_len, (buf + BLKSIZE) - (lcp + ldp->rec_len)); //move all block data left from the deleted dir's end
+            printf("Worked...\n");
+
+            cp = lcp; //go back to starting location where old dir used to be
+
+            while (cp + dp->rec_len != (buf + BLKSIZE) - old_diff){ //go until the last dir entry in the block is found again
+
+              cp += dp->rec_len; //go to the next dir entry
+              dp = (DIR *)cp;
 
             }
 
-            dp = (DIR*)lcp; // point to the moved location of the last dir entry in the block
-            dp->rec_len = (buf + BLKSIZE) - lcp; //resize the rec_len which spans to the end of the block 
-            //NOTE: it will be bigger now since a dir entry was removed
+            dp->rec_len += old_diff; //add the removed dir rec len to last dir entry so it will extend the to the ned of the block again
 
             put_block(dev, inode.i_block[i], buf); //write back changes to the data block
 
