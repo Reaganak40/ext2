@@ -6,6 +6,8 @@ int set_bit(char *buf, int bit);// in Chapter 11.3.1
 int my_mkdir(MINODE* mip, char* _basename);
 int init_dir(int dblk, int pino, int ino);
 int enter_name(MINODE* pip, int ino, char* name);
+int my_creat(MINODE* pmip, char* _basename);
+int create_inode(INODE* ip, int bno); //from book pg 334
 // **********************************************************
 
 extern int put_block(int dev, int blk, char *buf);
@@ -14,7 +16,6 @@ extern int getino(char *pathname);
 extern MINODE *iget(int dev, int ino);
 extern int search(MINODE *mip, char *name);
 extern MINODE *iget(int dev, int ino);
-extern int create_inode(INODE* ip, int bno);
 
 
 
@@ -182,6 +183,87 @@ int set_bit(char *buf, int bit){ // in Chapter 11.3.1
     */
 
     buf[i] |= (1 << j); // set byte i's, j bit to 1
+
+    return 0;
+}
+
+int creat_pathname(char* pathname){
+
+    //divide pathname into dirname and basename
+    int from_cwd, pino;
+    char dirname[128], _basename[128], temp[255];
+    MINODE* pmip;
+    
+    if(strlen(pathname) == 0 || (strlen(pathname) == 1 && pathname[0] == '/')){ //if no pathname given or pathname is '/'
+
+        return -1;
+    }
+    tokenize(pathname);
+    
+    //determine to start at root or cwd
+    if(pathname[0] == '/'){
+            strcpy(dirname, "/"); //dirname is root
+        }else{  //dirname is cwd
+            strcpy(dirname, "");
+    }
+
+    //build the dirname
+    for(int i = 0; i < (n-1); i++){
+        strcat(dirname, name[i]);
+
+        if((i+1) < (n-1)){
+            strcat(dirname, "/");
+        }
+    }
+    
+
+    strcpy(_basename, name[n - 1]); //get the _basename from path
+
+    printf("dirname: %s\nbasename: %s\n", dirname, _basename);
+
+    if(strlen(dirname)){ //if a dirname was given
+        pino = getino(dirname); //get the inode number for the parent directory
+
+        if(!pino){ //dirname does not exist
+            printf("creat unsuccessful\n");
+            return -1;
+        }
+
+        //dirname is legit, now check if it is a directory
+        pmip = iget(dev, pino); //create new minode for parent directory
+    }else{ //if in cwd
+        pmip = iget(dev, running->cwd->ino); //pmip becomes the cwd inode
+    }
+
+    if(strlen(dirname) && is_dir(pmip) != 0){ //pmip is not a directory (only check if not cwd)
+        printf("dirname is not a directory\ncreat unsuccessful\n");
+        return -1;
+    }
+    
+    //all checks made, safe to creat
+
+
+    return my_creat(pmip, _basename);
+}
+
+int my_creat(MINODE* pmip, char* _basename){
+
+    int ino;
+    MINODE* mip;
+    INODE inode;
+
+    ino = ialloc(dev); // get the newly allocated inode number
+    mip = iget(dev, ino); //get the new inode via minode
+
+    //initialize inode *************
+    create_inode(&mip->INODE, 0); // 0 because no block is allocated (also when 0 is given, create_inode intuitively makes it a reg file type)
+    mip->dirty = 1; //mark inode dirty
+    iput(mip); //write inode to disk
+    //*****************************
+
+    enter_name(pmip, ino, _basename); // add new reg file to parent directory data block
+
+    // NOTE: We don't increment parent link count
 
     return 0;
 }
@@ -429,4 +511,50 @@ int enter_name(MINODE* pip, int ino, char* name){
 
    return 0;
 
+}
+
+/*****************************************************
+*
+*  Name:    create inode
+*  Made by: Reagan
+*  Details: initilizes inode ip as a directory, bno the 
+*           is the first data black in i_blocks. It is 
+*           allocated before-hand
+*
+*****************************************************/
+int create_inode(INODE* ip, int bno){ //from book pg 334
+  
+   if(!bno){ //if 0 must be reg type
+        ip->i_mode = 0x81A4; // 040755: REG type and permissions
+   }else{ // if not 0 must be dir type
+        ip->i_mode = 0x41ED; // 040755: DIR type and permissions
+   }
+
+   ip->i_uid = running->uid; // owner uid
+   ip->i_gid = running->gid; // group Id
+
+   if(!bno){ //if 0 must be reg type
+        
+        ip->i_size = 0; // size in bytes for reg file
+
+   }else{ // if not 0 must be dir type
+        ip->i_size = BLKSIZE; // size in bytes for dir
+   }
+
+   if(!bno){ // if 0 must be reg type
+
+        ip->i_links_count = 1; // links count=1 because of reg file
+   }else{ // if not 0 must be dir type
+        ip->i_links_count = 2; // links count=2 because of . and ..
+   }
+   
+   ip->i_atime = ip->i_ctime = ip->i_mtime = time(0L);
+   ip->i_blocks = 2; // LINUX: Blocks count in 512-byte chunks
+   ip->i_block[0] = bno; // new DIR has one data block
+   
+   for(int i = 1; i < 14; i++){
+        ip->i_block[i] = 0;
+   }
+
+   return 0;
 }

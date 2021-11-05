@@ -389,29 +389,3 @@ int findino(MINODE *mip, u32 *myino) // myino = i# of . return i# of ..
    return parent_ino;
 }
 
-/*****************************************************
-*
-*  Name:    create inode
-*  Made by: Reagan
-*  Details: initilizes inode ip as a directory, bno the 
-*           is the first data black in i_blocks. It is 
-*           allocated before-hand
-*
-*****************************************************/
-int create_inode(INODE* ip, int bno){ //from book pg 334
-
-   ip->i_mode = 0x41ED; // 040755: DIR type and permissions
-   ip->i_uid = running->uid; // owner uid
-   ip->i_gid = running->gid; // group Id
-   ip->i_size = BLKSIZE; // size in bytes
-   ip->i_links_count = 2; // links count=2 because of . and ..
-   ip->i_atime = ip->i_ctime = ip->i_mtime = time(0L);
-   ip->i_blocks = 2; // LINUX: Blocks count in 512-byte chunks
-   ip->i_block[0] = bno; // new DIR has one data block
-   
-   for(int i = 1; i < 14; i++){
-        ip->i_block[i] = 0;
-   }
-
-   return 0;
-}
