@@ -6,6 +6,7 @@ int my_link(MINODE* pmip, int oino, char* _basename);
 
 extern int getino(char *pathname);
 extern int is_dir(MINODE* mip);
+extern int enter_name(MINODE* pip, int ino, char* name);
 
 extern int n;
 extern char *name[64];
@@ -25,7 +26,7 @@ int link_pathname(char* pathname){
 
     oino = getino(pathname); //get inode number for old file
 
-    if(!oino){
+    if(!oino){ //check old file exsits
         printf("link_pathname : %s is not a valid path\nlink unsuccessful\n", pathname);
         return -1;
     }
@@ -80,11 +81,27 @@ int link_pathname(char* pathname){
         pmip = iget(dev, running->cwd->ino); //pmip becomes the cwd inode
     }
 
-    //parent directory found, old file inode found, and new file name identified
-    //safe to run my link
-    return my_link(pmip, oino, new_basename);
+    // AT THIS POINT IN THE CODE: parent directory found, old file inode found, and new file name identified
+    // all potential errors accounted for: safe to run my link
+    int success;
+    success = my_link(pmip, oino, new_basename); //link file
+
+    if(success == -1){ //my_link did not work
+        return success;
+    }
+
+    omip->INODE.i_links_count++; //increment omip's inode link count by 1;
+    omip->dirty = 1;
+    
+    iput(omip); //update old file's inode
+    iput(pmip); //update parent inode (only happens if new i_block had to be allocated)
+
+    return 0;
+
+
+
 }
 
 int my_link(MINODE* pmip, int oino, char* _basename){
-
+    return enter_name(pmip, oino, _basename);
 }

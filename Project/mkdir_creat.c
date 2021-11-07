@@ -495,7 +495,8 @@ int enter_name(MINODE* pip, int ino, char* name){
    }
 
    blk = balloc(dev); // get the newly allocated block number
-   inode.i_block[last_used_iblock + 1] = blk;
+   pip->INODE.i_block[last_used_iblock + 1] = blk;
+   pip->dirty = 1;
 
    //get the new data block
    get_block(dev, blk, buf); // NOTE: no need to write back earlier buf because no changes were made
