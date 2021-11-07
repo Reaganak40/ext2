@@ -12,6 +12,8 @@
 
 #include "type.h"
 
+int add_second_pathname(char line[]);
+
 // functions used from other source files *******
 extern MINODE *iget();
 extern int get_block(int dev, int blk, char *buf);
@@ -34,6 +36,7 @@ char line[128], cmd[32], pathname[128];
 #include "cd_ls_pwd.c"
 #include "mkdir_creat.c"
 #include "rmdir.c"
+#include "link_unlink.c"
 
 /*****************************************************
 *
@@ -129,9 +132,12 @@ int main(int argc, char *argv[ ])
   printf("root refCount = %d\n", root->refCount);
 
   // WRTIE code here to create P1 as a USER process
-  
+  printf(" ************** Input Commands **************\n");
+  printf("     ls   cd   pwd   mkdir   rmdir   creat \n");
+  printf("       link    unlink    symlink   quit\n");
+  printf(" *******************************************\n");
   while(1){ //shell loop
-    printf("input command : [ls|cd|pwd|mkdir|rmdir|creat|quit] ");
+    printf("input command : ");
     fgets(line, 128, stdin);  //get command from user
     line[strlen(line)-1] = 0;
 
@@ -155,9 +161,32 @@ int main(int argc, char *argv[ ])
        rmdir_pathname(pathname);
     else if (strcmp(cmd, "creat")==0)
        creat_pathname(pathname);
+    else if (strcmp(cmd, "link")==0 || strcmp(cmd, "ln")==0){
+       if(!add_second_pathname(line)) //0 if second pathname given
+        link_pathname(pathname);
+    }
     else if (strcmp(cmd, "quit")==0)
        quit();
   }
+}
+
+int add_second_pathname(char line[]){
+    int start_of_second_path;
+    char second_path[128];
+    start_of_second_path = strlen(cmd) + strlen(pathname);
+
+    if(strlen(line) == start_of_second_path + 1){
+      printf("Error: No second path given.\n");
+      return -1;
+    }else if(strcmp(line + strlen(line) - 1, " ") == 0){
+      printf("Error: ended command with a space (don't do that).\n");
+      return -1;
+    }
+    sscanf(line + start_of_second_path + 1, "%s", second_path);  //get second path
+    
+    strcat(pathname, " ");
+    strcat(pathname, second_path);
+    return 0;
 }
 
 int quit()
