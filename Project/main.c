@@ -165,6 +165,8 @@ int main(int argc, char *argv[ ])
        if(!add_second_pathname(line)) //0 if second pathname given
         link_pathname(pathname);
     }
+    else if (strcmp(cmd, "unlink")==0)
+       unlink_pathname(pathname);
     else if (strcmp(cmd, "quit")==0)
        quit();
   }

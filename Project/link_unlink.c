@@ -7,10 +7,105 @@ int my_link(MINODE* pmip, int oino, char* _basename);
 extern int getino(char *pathname);
 extern int is_dir(MINODE* mip);
 extern int enter_name(MINODE* pip, int ino, char* name);
+extern int rm_child(MINODE* pmip, char* fname);
+extern int bdalloc(int dev, int blk);
+extern int idalloc(int dev, int ino);
 
 extern int n;
 extern char *name[64];
 
+int unlink_pathname(char* pathname){
+    int ino, pino;
+    MINODE* mip, *pmip;
+    char dirname[128], _basename[128];
+
+    ino = getino(pathname);
+    
+    if(!ino){ //if pathname does not exist
+        printf("unlink pathname: %s does not exist.\nunlink unsuccessful\n", pathname);
+        return -1;
+    }
+
+    mip = iget(dev, ino); //get inode of pathname
+
+    if(is_dir(mip) == 0){ //if mip is directory, dont unlink
+        printf("unlink pathname: %s is a directory.\nunlink unsuccessful\n", pathname);
+        return -1;
+    }
+
+    tokenize(pathname);
+    
+    //determine to start at root or cwd
+    if(pathname[0] == '/'){
+            strcpy(dirname, "/"); //dirname is root
+        }else{  //dirname is cwd
+            strcpy(dirname, "");
+    }
+
+    //build the dirname
+    for(int i = 0; i < (n-1); i++){
+        strcat(dirname, name[i]);
+
+        if((i+1) < (n-1)){
+            strcat(dirname, "/");
+        }
+    }
+    
+
+    strcpy(_basename, name[n - 1]); //get the _basename from path
+
+    printf("dirname: %s\nbasename: %s\n", dirname, _basename);
+
+    if(strlen(dirname)){ //if a dirname was given
+        pino = getino(dirname); //get the inode number for the parent directory
+
+        if(!pino){ //dirname does not exist
+            printf("creat unsuccessful\n");
+            return -1;
+        }
+
+        //dirname is legit, now check if it is a directory
+        pmip = iget(dev, pino); //create new minode for parent directory
+    }else{ //if in cwd
+        pmip = iget(dev, running->cwd->ino); //pmip becomes the cwd inode
+    }
+
+    if(strlen(dirname) && is_dir(pmip) != 0){ //pmip is not a directory (only check if not cwd)
+        printf("dirname is not a directory\ncreat unsuccessful\n");
+        return -1;
+    }
+
+    if(rm_child(pmip, _basename) != 0){
+        return -1;
+    }
+
+    pmip->dirty = 1;
+    iput(pmip);
+
+    //decrement inode's link count by 1
+    mip->INODE.i_links_count--;
+    if(mip->INODE.i_links_count > 0){ //if inode is still linked somewhere else
+        mip->dirty = 1;
+    }else{ //if inode is not linked anywhere else
+        printf("No more links, removing all references...\n");
+        for(int i = 0; i < 12; i++){ //assume no indirect i_blocks
+            if(mip->INODE.i_block[i] != 0){
+                bdalloc(dev, mip->INODE.i_block[i]); //deallocate the data block used by this file
+            }else{ //no more allocated i_blocks
+                break;
+            }
+
+        }
+
+        idalloc(dev, mip->ino); //deallocate the inode used by this file
+        mip->dirty = 1;
+
+    }
+
+    iput(mip); //release mip
+
+    return 0;
+}
 
 int link_pathname(char* pathname){
 
@@ -47,7 +142,7 @@ int link_pathname(char* pathname){
     tokenize(second_pathname);
     
     //determine to start at root or cwd
-    if(pathname[0] == '/'){
+    if(second_pathname[0] == '/'){
             strcpy(dirname, "/"); //dirname is root
         }else{  //dirname is cwd
             strcpy(dirname, "");

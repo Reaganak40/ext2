@@ -147,7 +147,7 @@ int rm_child(MINODE* pmip, char* fname){
     }
 
     if(last_used_iblock == -1){ //this happens if i_block[0] is not initalied or all 12 blocks are used
-      printf("rm_child : i_block could not be identifed");
+      printf("rm_child : i_block could not be identifed\n");
       return -1;
     }
 
