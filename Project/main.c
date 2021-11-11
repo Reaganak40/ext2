@@ -134,10 +134,10 @@ int main(int argc, char *argv[ ])
   printf("root refCount = %d\n", root->refCount);
 
   // WRTIE code here to create P1 as a USER process
-  printf(" ************** Input Commands **************\n");
+  printf(" **************** Input Commands ***************\n");
   printf("     ls   cd   pwd   mkdir   rmdir   creat \n");
-  printf("       link    unlink    symlink   quit\n");
-  printf(" *******************************************\n");
+  printf("  link    unlink    symlink   readlink   quit\n");
+  printf(" ***********************************************\n");
   while(1){ //shell loop
     printf("input command : ");
     fgets(line, 128, stdin);  //get command from user
@@ -173,6 +173,8 @@ int main(int argc, char *argv[ ])
        if(!add_second_pathname(line)) //0 if second pathname given
         symlink_pathname(pathname);
     }
+    else if (strcmp(cmd, "readlink")==0)
+       call_readlink(pathname);
     else if (strcmp(cmd, "quit")==0)
        quit();
   }

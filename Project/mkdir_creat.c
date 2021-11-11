@@ -55,13 +55,10 @@ int is_dir(MINODE* mip){
     //printf("ls: Can't ls a non-directory.\n");
     iput(mip); //derefrence useless minode to ref file
     return -1;
-  }else if(strcmp(mode_bits + 12, "0010") == 0){ // 0100 -> is a DIR,  OKAY
-    //printf("Pathname is a directory\n");
-  }else{
-      printf("[ERROR: Issue reading file type]");
-      iput(mip); //derefrence useless minode to ref file
-      return -1;
-
+  }else if(strcmp(mode_bits + 12, "0101") == 0){ // 0100 -> is a DIR,  OKAY
+    //printf("ls: Can't ls a non-directory.\n");
+    iput(mip); //derefrence useless minode to ref file
+    return -1;
   }
   //************************************************************
 

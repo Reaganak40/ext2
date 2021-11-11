@@ -2,12 +2,13 @@
 
 // Function declarations ****************************************
 int my_symlink(MINODE* pmip, char* old_name, char* _basename);
+int is_link(MINODE* mip);
+int readlink(char* pathname, char name[]);
 // **************************************************************
 
 extern int getino(char *pathname);
 extern int my_creat(MINODE* pmip, char* _basename);
 extern int balloc(int dev); //same as ialloc but for the block bitmap
-
 
 int symlink_pathname(char* pathname){
 
@@ -124,3 +125,87 @@ int my_symlink(MINODE* pmip, char* old_name, char* _basename){
 
 }
 
+int call_readlink(char* pathname){
+
+    char name[60];
+    int size;
+
+    size = readlink(pathname, name);
+
+    if(size == -1){
+        return -1;
+    }
+    printf("\n---- READLINK RESULTS ----\nFilename: %s\nSize: %d\n\n", name, size);
+
+
+    return 0;
+
+}
+int readlink(char* pathname, char name[]){
+
+    int ino, file_size;
+    MINODE* mip;
+    char buf[BLKSIZE];
+
+    ino = getino(pathname); //get inode number of link
+    mip = iget(dev, ino); //put inode in mip
+
+    if(is_link(mip) != 0){ //file is not a link
+        printf("readlink : %s is not a lnk type\nreadlink unsucessful\n", pathname);
+        return -1;
+    }
+
+    get_block(dev, mip->INODE.i_block[0], buf); //get data block that has file name
+
+    strncpy(name, buf, mip->INODE.i_size); //since size is the name str len, read that many chars from data block
+    name[mip->INODE.i_size] = 0;
+
+    file_size = mip->INODE.i_size;
+
+    iput(mip);
+
+    return file_size;
+    
+}
+
+
+/*****************************************************
+*
+*  Name:    is_link
+*  Made by: Reagan
+*  Details: Returns 0 if mip is a link
+*
+*****************************************************/
+int is_link(MINODE* mip){
+  // CHECK IF mip IS A LINK ***************************
+  INODE f_inode;
+  f_inode = mip->INODE;
+  u16 mode = f_inode.i_mode;                    // 16 bits mode
+  char mode_bits[16];
+  mode_bits[16] = '\0';
+
+  // this loop stores the u16 mode as binary (as a string) - but in reverse order
+  for(int i = 0; i < 16; i++){
+    int bit;
+    bit = (mode >> i) & 1;
+    //printf("%d\n", bit);
+    if(bit == 1){
+      mode_bits[i] = '1';
+    }else{
+      mode_bits[i] = '0';
+    }
+  }
+  
+  if(strcmp(mode_bits + 12, "0001") == 0){ // 1000 -> is a REG file, 
+    //printf("ls: Can't ls a non-directory.\n");
+    iput(mip); //derefrence useless minode to ref file
+    return -1;
+  }else if(strcmp(mode_bits + 12, "0010") == 0){ // 0100 -> is a DIR,  
+    //printf("ls: Can't ls a non-directory.\n");
+    iput(mip); //derefrence useless minode to ref file
+    return -1;
+  }
+  //************************************************************
+
+  return 0;
+}
