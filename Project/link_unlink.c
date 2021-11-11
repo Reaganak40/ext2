@@ -166,7 +166,7 @@ int link_pathname(char* pathname){
         pino = getino(dirname); //get the inode number for the parent directory
 
         if(!pino){ //dirname does not exist
-            printf("creat unsuccessful\n");
+            printf("link unsuccessful\n");
             return -1;
         }
 

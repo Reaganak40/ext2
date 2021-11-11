@@ -37,6 +37,8 @@ char line[128], cmd[32], pathname[128];
 #include "mkdir_creat.c"
 #include "rmdir.c"
 #include "link_unlink.c"
+#include "symlink.c"
+
 
 /*****************************************************
 *
@@ -167,6 +169,10 @@ int main(int argc, char *argv[ ])
     }
     else if (strcmp(cmd, "unlink")==0)
        unlink_pathname(pathname);
+    else if (strcmp(cmd, "symlink")==0){
+       if(!add_second_pathname(line)) //0 if second pathname given
+        symlink_pathname(pathname);
+    }
     else if (strcmp(cmd, "quit")==0)
        quit();
   }

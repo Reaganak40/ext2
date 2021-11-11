@@ -67,6 +67,8 @@ int ls_file(MINODE *mip, char *name)
     printf("-");
   }else if(strcmp(mode_bits + 12, "0010") == 0){ // 0100 -> is a DIR
     printf("d");
+  }else if(strcmp(mode_bits + 12, "0101") == 0){ // 0100 -> is a DIR
+    printf("l");
   }else{
       printf("[ERROR: Issue reading file type]");
 
