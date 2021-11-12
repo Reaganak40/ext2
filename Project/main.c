@@ -87,6 +87,13 @@ int mount_root()
 }
 
 char *disk = "diskimage";
+/*****************************************************
+*
+*  Name:    Main
+*  Made by: Reagan Kelley
+*  Details: Runs Project
+* 
+*****************************************************/
 int main(int argc, char *argv[ ])
 {
   int ino;
@@ -180,6 +187,16 @@ int main(int argc, char *argv[ ])
   }
 }
 
+/*****************************************************
+*
+*  Name:    add_second_pathname
+*  Made by: Reagan Kelley
+*  Details: If a given command requires 
+*           a second parameter, adds it to pathname 
+*           which originally only have the first 
+*           parameter
+* 
+*****************************************************/
 int add_second_pathname(char line[]){
     int start_of_second_path;
     char second_path[128];
@@ -199,6 +216,14 @@ int add_second_pathname(char line[]){
     return 0;
 }
 
+/*****************************************************
+*
+*  Name:    quit
+*  Made by: KC Wang
+*  Details: Kills project, and deallocates 
+*           dynamic variables
+* 
+*****************************************************/
 int quit()
 {
   int i;

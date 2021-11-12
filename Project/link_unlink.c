@@ -14,6 +14,14 @@ extern int idalloc(int dev, int ino);
 extern int n;
 extern char *name[64];
 
+/*****************************************************
+*
+*  Name:    unlink_pathname
+*  Made by: Reagan Kelley
+*  Details: verifies that pathname given for unlink is 
+*           valid, then does unlink implementation
+* 
+*****************************************************/
 int unlink_pathname(char* pathname){
     int ino, pino;
     MINODE* mip, *pmip;
@@ -107,6 +115,15 @@ int unlink_pathname(char* pathname){
     return 0;
 }
 
+/*****************************************************
+*
+*  Name:    link_pathname
+*  Made by: Reagan Kelley
+*  Details: verifies that pathname given for link is 
+*           valid, then prepares variables for my_link 
+*           call
+* 
+*****************************************************/
 int link_pathname(char* pathname){
 
     int oino, pino;
@@ -133,11 +150,19 @@ int link_pathname(char* pathname){
         return -1;
     }
 
-    if(getino(second_pathname)){ //if second pathname has an inode, that means new file already exists
+    if(getino(second_pathname) > 0){ //if second pathname has an inode, that means new file already exists
         printf("link_pathname: %s already exists\nlink unsuccessful\n", second_pathname);
         return -1;
 
     }
+
+    if(getino(second_pathname) == -1){ //if second pathname is invalid
+        printf("link_pathname: %s is not a valid pathname\nlink unsuccessful\n", second_pathname);
+        return -1;
+
+    }
+
+
     //tokenize second pathname
     tokenize(second_pathname);
     
@@ -161,7 +186,7 @@ int link_pathname(char* pathname){
     strcpy(new_basename, name[n - 1]); //get the _basename from path
 
     printf("dirname: %s\nbasename: %s\n", dirname, new_basename);
-
+    
     if(strlen(dirname)){ //if a dirname was given
         pino = getino(dirname); //get the inode number for the parent directory
 
@@ -172,10 +197,19 @@ int link_pathname(char* pathname){
 
         //dirname is legit, now check if it is a directory
         pmip = iget(dev, pino); //create new minode for parent directory
+
     }else{ //if in cwd
         pmip = iget(dev, running->cwd->ino); //pmip becomes the cwd inode
     }
 
+
+    if(is_dir(pmip) != 0){ //if given dirname is not a directory
+    
+        iput(pmip);
+        printf("link_pathname : %s is not a dir path\nlink unsuccessful\n", dirname);
+        return -1;
+        
+    }
     // AT THIS POINT IN THE CODE: parent directory found, old file inode found, and new file name identified
     // all potential errors accounted for: safe to run my link
     int success;
@@ -197,6 +231,15 @@ int link_pathname(char* pathname){
 
 }
 
+/*****************************************************
+*
+*  Name:    my link
+*  Made by: Reagan Kelley
+*  Details: Takes a parent directory, and makes a 
+*           new link connected by the given inode, 
+*           and then puts in that parent directory.
+* 
+*****************************************************/
 int my_link(MINODE* pmip, int oino, char* _basename){
     return enter_name(pmip, oino, _basename);
 }

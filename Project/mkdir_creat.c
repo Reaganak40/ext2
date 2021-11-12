@@ -184,6 +184,15 @@ int set_bit(char *buf, int bit){ // in Chapter 11.3.1
     return 0;
 }
 
+/*****************************************************
+*
+*  Name:    creat_pathname
+*  Made by: Reagan Kelley
+*  Details: Takes a given pathname, and makes sure 
+*           that it can be used to creat a new file. 
+*           If all checks are made, my_creat is called.
+* 
+*****************************************************/
 int creat_pathname(char* pathname){
 
     //divide pathname into dirname and basename
@@ -191,6 +200,18 @@ int creat_pathname(char* pathname){
     char dirname[128], _basename[128], temp[255];
     MINODE* pmip;
     
+
+    if(getino(pathname) > 0){ //if given pathname already exists
+        printf("creat_pathname : %s already exists\ncreat unsuccessful\n", pathname);
+        return -1;
+    }
+
+    if(getino(pathname) == -1){ //if second pathname is invalid
+        printf("creat_pathname: %s is not a valid pathname\ncreat unsuccessful\n", pathname);
+        return -1;
+
+    }
+
     if(strlen(pathname) == 0 || (strlen(pathname) == 1 && pathname[0] == '/')){ //if no pathname given or pathname is '/'
 
         return -1;
@@ -243,6 +264,15 @@ int creat_pathname(char* pathname){
     return my_creat(pmip, _basename);
 }
 
+/*****************************************************
+*
+*  Name:    my_creat
+*  Made by: Reagan Kelley
+*  Details: Takes a parent directory and creates a 
+*           new file with the given basename, puts
+*           in the parent directory
+* 
+*****************************************************/
 int my_creat(MINODE* pmip, char* _basename){
 
     int ino;

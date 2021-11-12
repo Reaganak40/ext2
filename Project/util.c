@@ -22,6 +22,8 @@ extern int n;
 
 extern int fd, dev; //dev is device (disk) file descriptor
 extern int balloc(int dev); //same as ialloc but for the block bitmap
+extern int is_dir(MINODE* mip);
+
 
 
 // nblocks = how many blocks are on the disk (1440 for virtual floppy disks (FD))
@@ -206,6 +208,11 @@ int search(MINODE *mip, char *name)
    DIR *dp;
    INODE *ip;
 
+   if(is_dir(mip) != 0){ //if mip is not a directory, search not possible (By Reagan, found error)
+      printf("search : Can't search a non-directory\n");
+      return -1;
+   }
+
    printf("search for %s in MINODE = [%d, %d]\n", name,mip->dev,mip->ino);
    ip = &(mip->INODE);
 
@@ -267,6 +274,11 @@ int getino(char *pathname)
       printf("getino: i=%d name[%d]=%s\n", i, i, name[i]);
  
       ino = search(mip, name[i]); //gets the child for this parent directory with name
+
+      if(ino == -1){ // search encountered an error (By Reagan)
+         printf("getino : inode could not be identified in search\n");
+         return -1;
+      }
 
       if (ino==0){
          iput(mip);

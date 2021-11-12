@@ -10,6 +10,15 @@ extern int getino(char *pathname);
 extern int my_creat(MINODE* pmip, char* _basename);
 extern int balloc(int dev); //same as ialloc but for the block bitmap
 
+/*****************************************************
+*
+*  Name:    symlink_pathname
+*  Made by: Reagan Kelley
+*  Details: Runs checks to make sure symlink can be 
+*           called on the given pathname, if its safe, 
+*           runs symlink function
+*
+*****************************************************/
 int symlink_pathname(char* pathname){
 
     int oino, pino;
@@ -85,9 +94,16 @@ int symlink_pathname(char* pathname){
 
 }
 
-
+/*****************************************************
+*
+*  Name:    my_symlink
+*  Made by: Reagan Kelley
+*  Details: Makes a lnk file in the given directory, 
+*           which will hold the name of the old file
+*
+*****************************************************/
 int my_symlink(MINODE* pmip, char* old_name, char* _basename){
-    if(my_creat(pmip, _basename)){
+    if(my_creat(pmip, _basename)){ //creat file with basename (i_mode will be changed later)
         return -1;
     }
 
@@ -125,6 +141,14 @@ int my_symlink(MINODE* pmip, char* old_name, char* _basename){
 
 }
 
+/*****************************************************
+*
+*  Name:    call_readlink
+*  Made by: Reagan Kelley
+*  Details: Prints the readlink results from a 
+*           given pathname
+*
+*****************************************************/
 int call_readlink(char* pathname){
 
     char name[60];
@@ -141,6 +165,15 @@ int call_readlink(char* pathname){
     return 0;
 
 }
+
+/*****************************************************
+*
+*  Name:    readlink
+*  Made by: Reagan Kelley
+*  Details: Returns the name inside the link file's 
+*           data block, as well as that names strlen
+*
+*****************************************************/
 int readlink(char* pathname, char name[]){
 
     int ino, file_size;

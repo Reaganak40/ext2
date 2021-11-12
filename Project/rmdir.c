@@ -16,6 +16,13 @@ extern int n;
 extern char *name[64];
 
 //Page 338: int idalloc(dev, ino) deallocate an inode (number)
+/*****************************************************
+*
+*  Name:    idalloc
+*  Made by: Reagan Kelley
+*  Details: Deallocates the inode at inode number (ino)
+*
+*****************************************************/
 int idalloc(int dev, int ino)
 {
   int i;  
@@ -35,6 +42,13 @@ int idalloc(int dev, int ino)
   return 0;
 }
 
+/*****************************************************
+*
+*  Name:    bdalloc
+*  Made by: Reagan Kelley
+*  Details: Deallocates the block indicated by blk
+*
+*****************************************************/
 int bdalloc(int dev, int blk){
 
     int i;  
@@ -54,7 +68,15 @@ int bdalloc(int dev, int blk){
     return 0;
 }
 
-
+/*****************************************************
+*
+*  Name:    clr_bit
+*  Made by: Reagan Kelley
+*  Details: Uses bitwise functions to take the bit 
+*           (location in buf inidicated by int bit) 
+*           to change it to 0.
+*
+*****************************************************/
 int clr_bit(char* buf, int bit){
   int i,j;
 
@@ -66,6 +88,15 @@ int clr_bit(char* buf, int bit){
   return 0;
 }
 
+/*****************************************************
+*
+*  Name:    rmdir_pathname
+*  Made by: Reagan Kelley
+*  Details: Checks if pathname leads an existing dir, 
+*           and removes if from disk, but only if its 
+*           empty
+*
+*****************************************************/
 int rmdir_pathname(char* pathname){
     int ino, pino;
     MINODE* mip, *pmip;
@@ -128,6 +159,14 @@ int rmdir_pathname(char* pathname){
 
 }
 
+/*****************************************************
+*
+*  Name:    rm_child
+*  Made by: Reagan Kelley
+*  Details: Given an parent directory, fname is found 
+*           in the dir_entries, and it is removed.
+*
+*****************************************************/
 int rm_child(MINODE* pmip, char* fname){
     
     INODE inode;

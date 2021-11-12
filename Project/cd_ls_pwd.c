@@ -7,6 +7,13 @@ extern int findmyname(MINODE *parent, u32 myino, char myname[ ]);
 extern int is_dir(MINODE* mip);
 //***********************************************
 
+/*****************************************************
+*
+*  Name:    cd
+*  Made by: Reagan Kelley
+*  Details: changes working directory to thaty of pathnamwe
+* 
+*****************************************************/
 int cd(char *pathname)
 {
   //printf("cd: under construction READ textbook!!!!\n");
@@ -33,6 +40,13 @@ int cd(char *pathname)
 
 }
 
+/*****************************************************
+*
+*  Name:    ls_file
+*  Made by: Reagan Kelley
+*  Details: print ls line for given file
+* 
+*****************************************************/
 int ls_file(MINODE *mip, char *name)
 {
   //printf("ls_file: to be done: READ textbook!!!!\n");
