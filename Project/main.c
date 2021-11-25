@@ -1,5 +1,5 @@
 /****************************************************************************
-*                   KCW: mount root file system                             *
+*                   REAGAN: mount root file system                             *
 *****************************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,6 +24,8 @@ int quit(); //local function defintion
 MINODE minode[NMINODE];
 MINODE *root;
 PROC   proc[NPROC], *running;
+OFT oft[NOFT];
+
 
 char gpath[128]; // global for tokenized components
 char *name[64];  // assume at most 64 components in pathname
@@ -38,7 +40,7 @@ char line[128], cmd[32], pathname[128];
 #include "rmdir.c"
 #include "link_unlink.c"
 #include "symlink.c"
-
+#include "open_close_lseek.c"
 
 /*****************************************************
 *
@@ -52,7 +54,7 @@ int init()
   int i, j;
   MINODE *mip;
   PROC   *p;
-
+  OFT* t;
   printf("init()\n");
 
   //initialize all minodes to 0 (no minodes)
@@ -71,6 +73,15 @@ int init()
     p->uid = p->gid = 0;
     p->cwd = 0;
   }
+
+  //Initialize all open file tables to 0 (no ofts)
+  for(int i = 0; i < NOFT; i++){
+    t = &oft[i];
+    t->minodePtr = 0;
+    t->mode = 0;
+    t->offset = 0;
+    t->refCount = 0;
+  }
 }
 
 /*****************************************************
@@ -86,7 +97,7 @@ int mount_root()
   root = iget(dev, 2); // 2nd inode is always root in ext2 file system
 }
 
-char *disk = "diskimage";
+char *disk = "disk2"; // changed to 'disk2' for level 2
 /*****************************************************
 *
 *  Name:    Main
@@ -182,6 +193,8 @@ int main(int argc, char *argv[ ])
     }
     else if (strcmp(cmd, "readlink")==0)
        call_readlink(pathname);
+    else if (strcmp(cmd, "open")==0)
+       my_open(pathname, 0);
     else if (strcmp(cmd, "quit")==0)
        quit();
   }
