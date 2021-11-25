@@ -15,11 +15,14 @@
 extern MINODE minode[NMINODE]; //Array of MINODEs (used for processing)
 extern MINODE *root; //root minode (used in mount root) gets root dir
 extern PROC   proc[NPROC], *running;
+extern OFT oft[NOFT];
+
 
 extern char gpath[128];
 extern char *name[64];
 extern int n;
 
+extern int nfd;
 extern int fd, dev; //dev is device (disk) file descriptor
 extern int balloc(int dev); //same as ialloc but for the block bitmap
 extern int is_dir(MINODE* mip);
@@ -94,6 +97,98 @@ int tokenize(char *pathname)
   for (i= 0; i<n; i++)
     printf("%s  ", name[i]);
   printf("\n");
+}
+
+/*****************************************************
+*
+*  Name:    init_proc
+*  Made by: Reagan
+*  Details: Initialized a new proc at pid if it is free. 
+*           If it is free assigns the running ptr and 
+*           returns 0. Otherwise returns 1 and doesn't 
+*           assign anything.
+*
+*****************************************************/
+int init_proc(int pid){
+   PROC* p;
+   
+   p = &proc[pid]; // get process at process id
+   if(p->status == FREE){
+      p->status = READY;
+      running = p;
+      nfd = 0; 
+      return 0;
+   }
+
+   return 1;
+}
+
+/*****************************************************
+*
+*  Name:    oget
+*  Made by: Reagan
+*  Details: Either allocates a new open file table or 
+*           get's a preeixsting one to return
+*
+*****************************************************/
+OFT* oget(int dev, MINODE* mip, int mode, int* fd_loc){
+   OFT* table;
+
+   for(int i = 0; i < NOFT; i++){ //traverse tables
+      table = &oft[i]; // get next open file table
+
+      if(table->minodePtr == mip){ // if minode belongs to this tables minodePtr
+         if(table->mode == mode){
+            table->refCount++;
+            return table;
+         }
+
+      }
+   }
+
+   for(int i = 0; i < NOFT; i++){ //traverse tables
+      table = &oft[i]; // get next open file table
+
+      if(table->refCount == 0){ // go to next unused table
+         table->minodePtr = mip;
+         table->mode = mode;
+         table->offset = 0;
+         table->refCount = 1;
+
+         int assigned = 0;
+         for(int f = 0; f < nfd; f++){
+            if(running->fd[f] == 0){ //if there is a free spot in file descriptors list
+               running->fd[f] = table;
+               *fd_loc = f;
+               assigned = 1;
+               printf("ogot : fd assigned to empty spot in fd list of proc\n");
+               break;
+   
+            }
+         }
+         
+         if(!assigned){ // if no fd spots were available -> expand list
+            nfd++;
+            if(nfd == NFD){ //if fd limit reached for this proc
+               printf("OH NO: FD limit reached for this PROC!\n");
+               *fd_loc = -1;
+            }else{ //expand list and add fd
+               printf("ogot : expanded fd limit for this proc\n");
+               running->fd[nfd - 1] = table;
+               *fd_loc = nfd - 1;
+            }
+
+         }
+         return table;
+      }
+
+   }
+
+
+   printf("PANIC: No more Open File Tables!\n");
+
+   return 0;
+
 }
 
 /*****************************************************

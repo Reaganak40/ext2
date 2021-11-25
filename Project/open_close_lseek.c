@@ -12,7 +12,7 @@ int is_reg(MINODE* mip);
 
 extern int getino(char *pathname);
 extern int creat_pathname(char* pathname);
-
+extern OFT* oget(int dev, MINODE* mip, int mode, int* fd_loc);
 /*****************************************************
 *
 *  Name:    is_reg
@@ -115,13 +115,16 @@ int has_permission(MINODE* mip, int _mode){
 *
 *  Name:    my_open
 *  Made by: Reagan
-*  Details: Opens a file for read or write
+*  Details: Opens a file for read or write, 
+*           returns file descripor
 *
 *****************************************************/
 int my_open(char* filename, int flags){
 
     int ino, mode;
     MINODE* mip;
+    OFT* table;
+    int fd_loc = 0;
 
     // validate the open mode
     if(flags == R || flags == W || flags == RW || flags == APPEND){
@@ -154,8 +157,14 @@ int my_open(char* filename, int flags){
         return -1;
     }
 
+    table = oget(dev, mip, mode, &fd_loc);
 
-    return 0;
+    if(fd_loc == -1){
+      printf("Open unsuccessful\n");
+      return -1;
+    }
+
+    return fd_loc;
 
 
 }

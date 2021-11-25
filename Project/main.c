@@ -18,12 +18,14 @@ int add_second_pathname(char line[]);
 extern MINODE *iget();
 extern int get_block(int dev, int blk, char *buf);
 extern void iput(MINODE *mip);
+int init_proc(int pid, PROC** _running);
 // *********************************************
 int quit(); //local function defintion
 
 MINODE minode[NMINODE];
 MINODE *root;
 PROC   proc[NPROC], *running;
+int nfd; // number of file descriptors for the running process
 OFT oft[NOFT];
 
 
@@ -72,6 +74,10 @@ int init()
     p->pid = i;
     p->uid = p->gid = 0;
     p->cwd = 0;
+
+    for(int g=0; g < NFD; g++){
+      p->fd[g] = 0;
+    }
   }
 
   //Initialize all open file tables to 0 (no ofts)
@@ -146,8 +152,7 @@ int main(int argc, char *argv[ ])
   printf("root refCount = %d\n", root->refCount);
 
   printf("creating P0 as running process\n");
-  running = &proc[0];           // P0 is initialized (super-user)
-  running->status = READY;      // Proc is ready
+  init_proc(0, &running);
   running->cwd = iget(dev, 2);  //ino 2 is root directory, so iget will make p0's cwd root directory
   printf("root refCount = %d\n", root->refCount);
 
