@@ -12,7 +12,8 @@ int is_reg(MINODE* mip);
 
 extern int getino(char *pathname);
 extern int creat_pathname(char* pathname);
-extern OFT* oget(int dev, MINODE* mip, int mode, int* fd_loc);
+extern OFT* oset(int dev, MINODE* mip, int mode, int* fd_loc);
+extern OFT* oget(PROC* pp, int fd);
 /*****************************************************
 *
 *  Name:    is_reg
@@ -157,7 +158,7 @@ int my_open(char* filename, int flags){
         return -1;
     }
 
-    table = oget(dev, mip, mode, &fd_loc);
+    table = oset(dev, mip, mode, &fd_loc);
 
     if(fd_loc == -1){
       printf("Open unsuccessful\n");
@@ -165,6 +166,111 @@ int my_open(char* filename, int flags){
     }
 
     return fd_loc;
+
+
+}
+
+/*****************************************************
+*
+*  Name:    my_close
+*  Made by: Reagan
+*  Details: Closes a file descriptor and deallocates 
+*           the inode and open file table
+*
+*****************************************************/
+int my_close(int fd){
+  OFT* table;
+
+  table = oget(running, fd);
+
+  if(!table){ //if fd does not correlate with a open file table in this proc
+    printf("my_close unsuccessful\n");
+    return -1;
+  }
+
+  table->refCount--; //decrement ref count for table
+
+  if(table->refCount == 0){ // if no more refs to this open file table
+    iput(table->minodePtr);
+  }
+
+  running->fd[fd] = 0; // remove this open file table from this processes fd list
+
+  return 0;
+
+}
+
+/*****************************************************
+*
+*  Name:    my_lseek
+*  Made by: Reagan
+*  Details: For a given fd, change the offset to the 
+*           position vlue
+*
+*****************************************************/
+int my_lseek(int fd, int position){ // no whence parameter for project
+  OFT* table;
+
+  table = oget(running, fd);
+
+  if(table == 0 || !table->minodePtr){
+    printf("my_lseek : open file table not assigned or no minode assigned\n");
+    printf("my_lseek unsuccessful\n");
+    return -1;
+  }
+
+  if(table->minodePtr->INODE.i_size < position){
+    printf("my_lseek : Position exceeds the size of the file\n");
+    printf("my_lseek unsuccessful\n");
+    return -1;
+  }
+
+  table->offset = position;
+
+  return 0;
+}
+
+int pfd(void){
+
+  OFT* table;
+  char mode[12];
+  int ino;
+
+
+  printf("fd    mode       offset    inode\n");
+  printf("---   ----       ------    -------\n");
+
+  for(int i = 0; i < nfd; i++){
+    table = oget(running, i);
+
+    if(table){
+      if(table->mode == R){
+        strcpy(mode, "READ");
+      }else if(table->mode == W){
+        strcpy(mode, "WRITE");
+      }else if(table->mode == RW){
+        strcpy(mode, "READ/WRITE");
+      }else if(table->mode == APPEND){
+        strcpy(mode, "APPEND");
+      }
+
+      ino = table->minodePtr->ino;
+
+      printf("%-5d %-10s %-8d [dev, %d]\n", i, mode, table->offset, ino);
+
+
+    }
+  }
+
+
+}
+int level_2_debeug(char* pathname){
+
+  int fd;
+
+  fd = my_open(pathname, RW);
+  my_lseek(fd, 10);
+  //my_close(fd);
 
 
 }

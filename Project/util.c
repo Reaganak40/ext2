@@ -125,13 +125,13 @@ int init_proc(int pid){
 
 /*****************************************************
 *
-*  Name:    oget
+*  Name:    oset
 *  Made by: Reagan
 *  Details: Either allocates a new open file table or 
 *           get's a preeixsting one to return
 *
 *****************************************************/
-OFT* oget(int dev, MINODE* mip, int mode, int* fd_loc){
+OFT* oset(int dev, MINODE* mip, int mode, int* fd_loc){
    OFT* table;
 
    for(int i = 0; i < NOFT; i++){ //traverse tables
@@ -161,7 +161,7 @@ OFT* oget(int dev, MINODE* mip, int mode, int* fd_loc){
                running->fd[f] = table;
                *fd_loc = f;
                assigned = 1;
-               printf("ogot : fd assigned to empty spot in fd list of proc\n");
+               printf("oset : fd assigned to empty spot in fd list of proc\n");
                break;
    
             }
@@ -173,7 +173,7 @@ OFT* oget(int dev, MINODE* mip, int mode, int* fd_loc){
                printf("OH NO: FD limit reached for this PROC!\n");
                *fd_loc = -1;
             }else{ //expand list and add fd
-               printf("ogot : expanded fd limit for this proc\n");
+               printf("oset : expanded fd limit for this proc\n");
                running->fd[nfd - 1] = table;
                *fd_loc = nfd - 1;
             }
@@ -191,6 +191,21 @@ OFT* oget(int dev, MINODE* mip, int mode, int* fd_loc){
 
 }
 
+/*****************************************************
+*
+*  Name:    oget
+*  Made by: Reagan
+*  Details: Returns the open file table at that proc's 
+*           file descriptor index.
+*
+*****************************************************/
+OFT* oget(PROC* pp, int fd){
+   if(pp->fd[fd] == 0){
+      printf("oget : %d does not indicate any open file table in proc\n", fd);
+      return 0;
+   }
+   return pp->fd[fd];
+}
 /*****************************************************
 *
 *  Name:    iget
