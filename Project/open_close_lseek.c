@@ -14,6 +14,8 @@ extern int getino(char *pathname);
 extern int creat_pathname(char* pathname);
 extern OFT* oset(int dev, MINODE* mip, int mode, int* fd_loc);
 extern OFT* oget(PROC* pp, int fd);
+
+extern int my_read(int fd, char* buf, int nbytes);
 /*****************************************************
 *
 *  Name:    is_reg
@@ -230,6 +232,14 @@ int my_lseek(int fd, int position){ // no whence parameter for project
   return 0;
 }
 
+/*****************************************************
+*
+*  Name:    pfd
+*  Made by: Reagan
+*  Details: Prints all the assigned file descriptors 
+*           for the running proc
+*
+*****************************************************/
 int pfd(void){
 
   OFT* table;
@@ -267,10 +277,21 @@ int pfd(void){
 int level_2_debeug(char* pathname){
 
   int fd;
-
+  char buf[3000];
+  int end;
+  
   fd = my_open(pathname, RW);
-  my_lseek(fd, 10);
+  my_lseek(fd, 0);
+
+  end = my_read(fd, buf, 100);
+
+  printf("Content:\n");
+  buf[end] = '\0';
+
+  printf("%s\nend was = %d\n", buf, end);
+
+  return 0;
   //my_close(fd);
 
-
 }
+

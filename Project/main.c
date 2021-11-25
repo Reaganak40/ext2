@@ -37,12 +37,16 @@ int fd, dev;
 int nblocks, ninodes, bmap, imap, iblk;
 char line[128], cmd[32], pathname[128];
 
+// level-1 source files
 #include "cd_ls_pwd.c"
 #include "mkdir_creat.c"
 #include "rmdir.c"
 #include "link_unlink.c"
 #include "symlink.c"
+
+// level-2 source files
 #include "open_close_lseek.c"
+#include "read_cat.c"
 
 /*****************************************************
 *
@@ -202,6 +206,8 @@ int main(int argc, char *argv[ ])
        level_2_debeug(pathname);
     else if (strcmp(cmd, "pfd")==0)
        pfd();
+    else if (strcmp(cmd, "cat")==0)
+       my_cat(pathname);
     else if (strcmp(cmd, "quit")==0)
        quit();
   }
