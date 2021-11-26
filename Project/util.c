@@ -130,7 +130,8 @@ int init_proc(int pid){
 *  Made by: Reagan
 *  Details: Returns the block within the indirect disk 
 *           block (inode.i_block[12])
-*
+*           MAJOR PRECONDITION: offset blk_number to 
+*           exclude direct blocks
 *****************************************************/
 int get_indirect_block(int dev, int idblk, int blk_number){
 
@@ -154,7 +155,15 @@ int get_indirect_block(int dev, int idblk, int blk_number){
 
 }
 
-
+/*****************************************************
+*
+*  Name:    get double indirect block
+*  Made by: Reagan
+*  Details: Returns the block within the double indirect 
+*           disk block (inode.i_block[13])
+*           MAJOR PRECONDITION: offset blk_number to 
+*           exclude direct blocks and indirect blocks
+*****************************************************/
 int get_double_indirect_block(int dev, int didblk, int blk_number){
 
    char buf[BLKSIZE];
@@ -202,7 +211,9 @@ OFT* oset(int dev, MINODE* mip, int mode, int* fd_loc){
 
       if(table->minodePtr == mip){ // if minode belongs to this tables minodePtr
          if(table->mode == mode){
+            printf("oset : used pre-existing table\n");
             table->refCount++;
+            *fd_loc = i;
             return table;
          }
 
@@ -220,7 +231,7 @@ OFT* oset(int dev, MINODE* mip, int mode, int* fd_loc){
 
          int assigned = 0;
          for(int f = 0; f < nfd; f++){
-            if(running->fd[f] == 0){ //if there is a free spot in file descriptors list
+            if(running->fd[f] == 0){ //if there is a free spot in proc's file descriptors list
                running->fd[f] = table;
                *fd_loc = f;
                assigned = 1;
@@ -264,7 +275,7 @@ OFT* oset(int dev, MINODE* mip, int mode, int* fd_loc){
 *****************************************************/
 OFT* oget(PROC* pp, int fd){
    if(pp->fd[fd] == 0){
-      printf("oget : %d does not indicate any open file table in proc\n", fd);
+      //printf("oget : %d does not indicate any open file table in proc\n", fd);
       return 0;
    }
    return pp->fd[fd];

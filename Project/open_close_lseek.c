@@ -16,6 +16,7 @@ extern OFT* oset(int dev, MINODE* mip, int mode, int* fd_loc);
 extern OFT* oget(PROC* pp, int fd);
 
 extern int my_read(int fd, char* buf, int nbytes);
+extern int my_write(int fd, char* buf, int nbytes);
 /*****************************************************
 *
 *  Name:    is_reg
@@ -192,8 +193,11 @@ int my_close(int fd){
 
   table->refCount--; //decrement ref count for table
 
-  if(table->refCount == 0){ // if no more refs to this open file table
+  if(table->refCount == 0){ // if no more refs to this open file table, deallocate
     iput(table->minodePtr);
+    table->minodePtr = 0;
+    table->mode = 0;
+    table->offset = 0;
   }
 
   running->fd[fd] = 0; // remove this open file table from this processes fd list
@@ -282,13 +286,10 @@ int level_2_debeug(char* pathname){
   
   fd = my_open(pathname, RW);
   my_lseek(fd, 0);
+  end = my_write(fd, "I am writing to this file", 26);
+  my_close(fd);
+  printf("wrote: %d\n", end);
 
-  end = my_read(fd, buf, 100);
-
-  printf("Content:\n");
-  buf[end] = '\0';
-
-  printf("%s\nend was = %d\n", buf, end);
 
   return 0;
   //my_close(fd);

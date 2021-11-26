@@ -47,6 +47,7 @@ char line[128], cmd[32], pathname[128];
 // level-2 source files
 #include "open_close_lseek.c"
 #include "read_cat.c"
+#include "write_cp.c"
 
 /*****************************************************
 *

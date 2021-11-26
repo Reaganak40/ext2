@@ -4,7 +4,13 @@ extern int get_block(int dev, int blk, char *buf);
 extern int get_indirect_block(int dev, int idblk, int blk_number);
 extern int get_double_indirect_block(int dev, int didblk, int blk_number);
 
-
+/*****************************************************
+*
+*  Name:    my_read
+*  Made by: Reagan
+*  Details: Reads data in file data blocks into buf
+*
+*****************************************************/
 int my_read(int fd, char* buf, int nbytes){
 
     OFT* table;
@@ -32,7 +38,7 @@ int my_read(int fd, char* buf, int nbytes){
 
     }
 
-    if(table->mode == W){
+    if(table->mode == W || table->mode == APPEND){
         printf("my_read : fd is not in read mode\n");
         printf("my_read unsuccessful\n");
         return -1;
@@ -136,6 +142,13 @@ int my_read(int fd, char* buf, int nbytes){
     return count;
 }
 
+/*****************************************************
+*
+*  Name:    my_cat
+*  Made by: Reagan
+*  Details: Prints file data to the screen
+*
+*****************************************************/
 int my_cat(char* pathname){
 
     int fd;
@@ -175,6 +188,7 @@ int my_cat(char* pathname){
     }
 
     my_close(fd);
+
 
     //printf("\nbytes read: %d\n", bytes_read);
 
