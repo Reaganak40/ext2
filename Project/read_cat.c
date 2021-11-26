@@ -1,6 +1,7 @@
 /************* read_cat.c file **************/
 
 extern int get_block(int dev, int blk, char *buf);
+extern int get_indirect_block(int dev, int idblk, int blk_number);
 
 int my_read(int fd, char* buf, int nbytes){
 
@@ -50,13 +51,28 @@ int my_read(int fd, char* buf, int nbytes){
         start = offset % BLKSIZE; // remainder is the byte offset at that block
 
         if(lbk > 12){ // exceeds direct i_block limit
-            printf("my_read : lbk exceeded direct block limit\n");
-            printf("my_read unsuccessful\n");
-            return -1;
+            int indirect_block;
+            indirect_block = table->minodePtr->INODE.i_block[12];
 
+            if(indirect_block == 0){ // if no indrect block
+                printf("my_read : could not find indrect disk block\n");
+                printf("my_read unsuccessful\n");
+                return -1;
+            }
+
+            lbk -= 12; //since this is after the first 12 i_blocks, shift blk value
+
+            dblock = get_indirect_block(dev, indirect_block, lbk); // get indirect block number
+
+            if(dblock == -1 || dblock == 0){
+                printf("my_read unsuccessful\n");
+                return -1;
+            }
+
+        }else{
+
+            dblock = table->minodePtr->INODE.i_block[lbk];
         }
-
-        dblock = table->minodePtr->INODE.i_block[lbk];
 
         if(dblock == 0){ // if i_blocks don't stretch that far
             printf("my_read : the requested i_block is unassigned\n");
@@ -121,7 +137,7 @@ int my_cat(char* pathname){
     size = oget(running, fd)->minodePtr->INODE.i_size;
     bytes_read = 0;
 
-    printf("[cat] start:\n\n");
+    printf("[cat] start:\n\n"); 
     while(bytes_read < size){
 
         local_read = my_read(fd, buf, BLKSIZE); // read as many bytes as possible in a data block
@@ -135,9 +151,10 @@ int my_cat(char* pathname){
         buf[local_read] = '\0';
         printf("%s", buf); // print file content to the screen
     }
+
     my_close(fd);
 
-    printf("\n");
+    //printf("\nbytes read: %d\n", bytes_read);
 
     return 0;
 }

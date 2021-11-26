@@ -123,6 +123,36 @@ int init_proc(int pid){
    return 1;
 }
 
+
+/*****************************************************
+*
+*  Name:    get indirect block
+*  Made by: Reagan
+*  Details: Returns the block within the indirect disk 
+*           block (inode.i_block[12])
+*
+*****************************************************/
+int get_indirect_block(int dev, int idblk, int blk_number){
+
+   char buf[BLKSIZE];
+
+   if(blk_number > (BLKSIZE / 4)){ 
+      printf("get_indirect_block : exceeded indrect block limit\n");
+      printf("get_indirect_block unsuccessful\n");
+      return -1;
+   }
+   //printf("Getting blk...\n");
+   get_block(dev, idblk, buf); // get the indirect disk block
+
+   int* ip = (int*)buf; //int pointer
+
+   //printf("assigning ip...\n");
+   ip += blk_number; //go to location of indrect_block where the blk number is
+
+   //printf("returning ip...");
+   return *ip;
+
+}
 /*****************************************************
 *
 *  Name:    oset
