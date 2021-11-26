@@ -153,6 +153,39 @@ int get_indirect_block(int dev, int idblk, int blk_number){
    return *ip;
 
 }
+
+
+int get_double_indirect_block(int dev, int didblk, int blk_number){
+
+   char buf[BLKSIZE];
+
+   int _diblk = blk_number / (BLKSIZE / 4); //this is what indirect block will have the data block we are looking for
+   int to_return; // this will be the true data block number
+
+   if(_diblk > (BLKSIZE / 4)){ // if the data block number is too big to be in the double indirect block (256 indirect blods)
+      printf("get_double_indirect_block : exceeded double indrect block limit\n");
+      printf("get_double_indirect_block unsuccessful\n");
+      return -1;
+   }
+
+   get_block(dev, didblk, buf); // get the double indirect disk block
+
+   int* ip = (int*)buf; //int pointer
+   ip += _diblk; //go to location of indrect_block where the blk number is
+
+   blk_number %= (BLKSIZE / 4); // will divide by 256 -> what blk within the determined indirect blk
+   // ip now points to an indirect block
+   to_return = get_indirect_block(dev, *ip, blk_number);
+
+
+   if(to_return == -1 || to_return == 0){
+      printf("get_double_indirect_block unsuccessful\n");
+      return -1;
+   }
+   //printf("returning ip...");
+   return to_return;
+
+}
 /*****************************************************
 *
 *  Name:    oset

@@ -2,6 +2,8 @@
 
 extern int get_block(int dev, int blk, char *buf);
 extern int get_indirect_block(int dev, int idblk, int blk_number);
+extern int get_double_indirect_block(int dev, int didblk, int blk_number);
+
 
 int my_read(int fd, char* buf, int nbytes){
 
@@ -50,7 +52,7 @@ int my_read(int fd, char* buf, int nbytes){
         lbk = offset / BLKSIZE; //what i_block would the data be at
         start = offset % BLKSIZE; // remainder is the byte offset at that block
 
-        if(lbk > 12){ // exceeds direct i_block limit
+        if(lbk > 12 && lbk <= (BLKSIZE / 4) + 12){ // exceeds direct i_block limit : INDIRECT BLOCK
             int indirect_block;
             indirect_block = table->minodePtr->INODE.i_block[12];
 
@@ -69,6 +71,26 @@ int my_read(int fd, char* buf, int nbytes){
                 return -1;
             }
 
+        }else if(lbk > (BLKSIZE / 4) + 12){ // DOUBLE INDIRECT BLOCK
+            
+            int double_indirect_block;
+            double_indirect_block = table->minodePtr->INODE.i_block[13];
+
+            if(double_indirect_block == 0){ // if no double indrect block
+                printf("my_read : could not find dobule indrect disk block\n");
+                printf("my_read unsuccessful\n");
+                return -1;
+            }
+
+            lbk -= (BLKSIZE / 4) + 12; //since this is after the first 12 i_blocks and indirect blocks, shift blk value
+
+            dblock = get_double_indirect_block(dev, double_indirect_block, lbk); // get indirect block number
+
+            if(dblock == -1 || dblock == 0){
+                printf("my_read unsuccessful\n");
+                return -1;
+            }
+            
         }else{
 
             dblock = table->minodePtr->INODE.i_block[lbk];
