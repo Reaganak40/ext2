@@ -288,7 +288,7 @@ int level_2_debeug(char* pathname){
   my_lseek(fd, 0);
   end = my_write(fd, "I am writing to this file", 26);
   my_close(fd);
-  printf("wrote: %d\n", end);
+  printf("\nwrote: %d\n", end);
 
 
   return 0;

@@ -8,8 +8,10 @@ int my_write(int fd, char* buf, int nbytes){
     int count = 0, offset;
     OFT* table;
 
-    int lbk, start, buf_loc, remain, fileSize; // logical block, start for write, where we are look at buf, remaining room in current data block, file size
+    int lbk, start, buf_loc = 0, remain, fileSize; // logical block, start for write, where we are look at buf, remaining room in current data block, file size
     char bbuf[BLKSIZE], *cp;
+    int d_block; // the actual data block number
+    int nblk; // if we need a new datas block
 
     table = oget(running, fd); //get open file table for file descriptor
 
@@ -47,7 +49,16 @@ int my_write(int fd, char* buf, int nbytes){
         start = offset % BLKSIZE; // remainder is the byte offset at that block
         remain = BLKSIZE - start;
 
-        get_block(dev, lbk, bbuf); // get data block
+        d_block = table->minodePtr->INODE.i_block[lbk];
+
+        if(d_block == 0){ // if i_blocks don't stretch that far, allocate new data block
+            printf("my_write : allocating a new datablock for inode...\n");
+            nblk = balloc(dev); // get the newly allocated block number
+            table->minodePtr->INODE.i_block[lbk] = nblk; // add new data block to i_block list
+            d_block = nblk;
+        }
+
+        get_block(dev, d_block, bbuf); // get data block
         cp = bbuf + start;
 
         int chunk;
@@ -58,11 +69,13 @@ int my_write(int fd, char* buf, int nbytes){
         }
         printf("writing data...\n");
         memcpy(cp, buf + buf_loc, chunk); //write a chunk of data to the data block
+        
         nbytes -= chunk; 
         offset += chunk;
         count += chunk;
         buf_loc += chunk;
-        put_block(dev, lbk, bbuf); // write block back to disk
+
+        put_block(dev, d_block, bbuf); // write block back to disk
 
         if(offset > fileSize){ //if file size has been increased
             fileSize = offset;
@@ -71,7 +84,7 @@ int my_write(int fd, char* buf, int nbytes){
 
     table->offset = offset;
     if(table->minodePtr->INODE.i_size != fileSize){
-        table->minodePtr->INODE.i_size == fileSize;
+        table->minodePtr->INODE.i_size = fileSize;
         table->minodePtr->dirty = 1; // dirty, will be modified on close
     }
 
