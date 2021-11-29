@@ -102,21 +102,21 @@ int ialloc(int dev)  // allocate an inode number from inode_bitmap
 *****************************************************/
 int balloc(int dev){ //same as ialloc but for the block bitmap
 
-  int  i;
-  char buf[BLKSIZE];
+    int  i;
+    char buf[BLKSIZE];
 
-  // read inode_bitmap block
-  get_block(dev, bmap, buf);
+    // read inode_bitmap block
+    get_block(dev, bmap, buf);
 
-  for (i=0; i < nblocks; i++){
-    if (tst_bit(buf, i)==0){ //returns the bit value (if there is no bit there)
-        set_bit(buf, i);
-        put_block(dev, bmap, buf);
-        printf("allocated block = %d\n", i+1); // bits count from 0; ino from 1
-        return i+1;
+    for (i=0; i < nblocks; i++){
+        if (tst_bit(buf, i)==0){ //returns the bit value (if there is no bit there)
+            set_bit(buf, i);
+            put_block(dev, bmap, buf);
+            printf("allocated block = %d\n", i+1); // bits count from 0; ino from 1
+            return i+1;
+        }
     }
-  }
-
+    printf("balloc : could not allocate new block\nballoc failed\n");
     return 0;
 }
 

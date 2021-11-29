@@ -123,6 +123,55 @@ int init_proc(int pid){
    return 1;
 }
 
+int add_indirect_entry(int dev, int idblk, int nblk){
+   char buf[BLKSIZE];
+
+   get_block(dev, idblk, buf);
+
+   int* ip = (int*)buf;
+
+   while(ip < (int*)(buf + BLKSIZE)){ // go to next empty entry
+      if(*ip == 0){ //an empty entry is found
+         *ip = nblk;
+         put_block(dev, idblk, buf); //set it and write back to disk
+         return 0;
+      }
+      ip++;
+   }
+
+   printf("add_indirect_entry : no room to allocate in indirect block\n");
+   printf("add_indirect_entry failed\n");
+   return -1;
+
+
+
+}
+
+int make_indirect_block(int dev){
+   int nblk;
+   char buf[BLKSIZE];
+   nblk = balloc(dev);
+
+   if(!nblk){ //if balloc failed
+      printf("make_indirect_block : could not allocate a new data block\n");
+      printf("make indirect block failed\n");
+      return -1;
+   }
+
+   get_block(dev, nblk, buf);
+
+   int* ip = (int*)buf;
+
+   while(ip < (int*)(buf + BLKSIZE)){ //set all indirect block entries to 0
+      *ip = 0;
+      ip++;
+   }
+
+   put_block(dev, nblk, buf);
+
+   return nblk;
+}
+
 
 /*****************************************************
 *
@@ -150,7 +199,6 @@ int get_indirect_block(int dev, int idblk, int blk_number){
    //printf("assigning ip...\n");
    ip += blk_number; //go to location of indrect_block where the blk number is
 
-   //printf("returning ip...");
    return *ip;
 
 }
@@ -182,12 +230,17 @@ int get_double_indirect_block(int dev, int didblk, int blk_number){
    int* ip = (int*)buf; //int pointer
    ip += _diblk; //go to location of indrect_block where the blk number is
 
+   if(*ip == 0){ // indirect block entry is not assigned, stop here
+
+      return -2; // -2 means that indirect block entry not assigned
+   }
+
    blk_number %= (BLKSIZE / 4); // will divide by 256 -> what blk within the determined indirect blk
    // ip now points to an indirect block
    to_return = get_indirect_block(dev, *ip, blk_number);
 
 
-   if(to_return == -1 || to_return == 0){
+   if(to_return == -1){
       printf("get_double_indirect_block unsuccessful\n");
       return -1;
    }

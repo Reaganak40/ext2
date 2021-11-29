@@ -209,6 +209,10 @@ int main(int argc, char *argv[ ])
        pfd();
     else if (strcmp(cmd, "cat")==0)
        my_cat(pathname);
+    else if (strcmp(cmd, "cp")==0){
+       if(!add_second_pathname(line)) //0 if second pathname given
+        cp_pathname(pathname);
+    }
     else if (strcmp(cmd, "quit")==0)
        quit();
   }
