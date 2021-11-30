@@ -163,6 +163,8 @@ int my_cat(char* pathname){
     }
 
     fd = my_open(pathname, R);
+    printf("descriptor: %d , mode: %d, dev: %d, ino: %d\n", fd, running->fd[fd]->mode, running->fd[fd]->minodePtr->dev, running->fd[fd]->minodePtr->ino);
+
 
     if(fd == -1){
         printf("my_cat unsuccessful\n");
