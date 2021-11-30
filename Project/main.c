@@ -120,7 +120,6 @@ int main(int argc, char *argv[ ])
 {
   int ino;
   char buf[BLKSIZE];
-
   //opens disk for read and write
   printf("checking EXT2 FS ....");
   if ((fd = open(disk, O_RDWR)) < 0){
@@ -203,8 +202,6 @@ int main(int argc, char *argv[ ])
     }
     else if (strcmp(cmd, "readlink")==0)
        call_readlink(pathname);
-    else if (strcmp(cmd, "l2")==0)
-       level_2_debeug(pathname);
     else if (strcmp(cmd, "pfd")==0)
        pfd();
     else if (strcmp(cmd, "cat")==0)

@@ -17,7 +17,7 @@ extern MINODE *iget(int dev, int ino);
 extern int search(MINODE *mip, char *name);
 extern MINODE *iget(int dev, int ino);
 
-
+int print_byte(char byte);
 
 
 extern int n;
@@ -146,12 +146,27 @@ int tst_bit(char *buf, int bit){ // in Chapter 11.3.1
         8 != 0; returns 1
         ** Thus can only be 0 if there is not a 1 bit at byte i, bit j
     */
-    if(buf[i] & (1 << j) != 0){
+
+    if(buf[i] & (1 << j)){
         return 1;
     }
+    printf("bit: %d\t", bit);
+    print_byte(buf[i]);
+    printf(" -> loc %d: ", j);
+    printf("is 0\n");
     return 0;
 }
 
+int print_byte(char byte){
+    for(int i = 7; i >= 0; i--){
+        if(byte & (1 << i)){
+            printf("1");
+        }else{
+        printf("0");
+        }
+        
+    }
+}
 /*****************************************************
 *
 *  Name:    set bit
@@ -163,7 +178,6 @@ int tst_bit(char *buf, int bit){ // in Chapter 11.3.1
 int set_bit(char *buf, int bit){ // in Chapter 11.3.1
 
     int i,j;
-
     i = bit / 8; // what n byte in buf this bit belongs to (8 bits in a byte)
     j = bit % 8; // which nth bit this bit belongs to in the i'th byte.
 
@@ -178,8 +192,12 @@ int set_bit(char *buf, int bit){ // in Chapter 11.3.1
         
         Places a 1 bit in the 3rd bit of this byte (before: 0001 0100, after: 0001 1100)
     */
-
+    printf("New byte:\t");
+    print_byte(buf[i]);
+    printf(" to ");
     buf[i] |= (1 << j); // set byte i's, j bit to 1
+    print_byte(buf[i]);
+    printf("\n");
 
     return 0;
 }
@@ -586,3 +604,5 @@ int create_inode(INODE* ip, int bno){ //from book pg 334
 
    return 0;
 }
+
+
