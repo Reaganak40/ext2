@@ -58,7 +58,7 @@ int my_read(int fd, char* buf, int nbytes){
         lbk = offset / BLKSIZE; //what i_block would the data be at
         start = offset % BLKSIZE; // remainder is the byte offset at that block
 
-        if(lbk > 12 && lbk <= (BLKSIZE / 4) + 12){ // exceeds direct i_block limit : INDIRECT BLOCK
+        if(lbk >= 12 && lbk < (BLKSIZE / 4) + 12){ // exceeds direct i_block limit : INDIRECT BLOCK
             int indirect_block;
             indirect_block = table->minodePtr->INODE.i_block[12];
 
@@ -77,7 +77,7 @@ int my_read(int fd, char* buf, int nbytes){
                 return -1;
             }
 
-        }else if(lbk > (BLKSIZE / 4) + 12){ // DOUBLE INDIRECT BLOCK
+        }else if(lbk >= (BLKSIZE / 4) + 12){ // DOUBLE INDIRECT BLOCK
             
             int double_indirect_block;
             double_indirect_block = table->minodePtr->INODE.i_block[13];

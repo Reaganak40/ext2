@@ -50,14 +50,18 @@ int my_write(int fd, char* buf, int nbytes){
     }
 
     fileSize = table->minodePtr->INODE.i_size;
+
+    // WRITE THE BYTES TO THE BUF
     while(nbytes){ //write to file until bytes limit reached
 
         lbk = offset / BLKSIZE; //what i_block would the data be at
+        int saved_lbk = lbk;
         start = offset % BLKSIZE; // remainder is the byte offset at that block
         remain = BLKSIZE - start;
 
         d_block = 0; // reset d_block for debugging purposes
-        if(lbk > 12 && lbk <= (BLKSIZE / 4) + 12){ // exceeds direct i_block limit : INDIRECT BLOCK
+        if(lbk >= 12 && lbk < (BLKSIZE / 4) + 12){ // exceeds direct i_block limit : INDIRECT BLOCK
+            // NOTE: For floppy disk lbk would be between 12 (inclusive) and 268 (exclusive)
             int indirect_block;
             indirect_block = table->minodePtr->INODE.i_block[12];
 
@@ -96,7 +100,8 @@ int my_write(int fd, char* buf, int nbytes){
 
             }
 
-        }else if(lbk > (BLKSIZE / 4) + 12){ // DOUBLE INDIRECT BLOCK
+        }else if(lbk >= (BLKSIZE / 4) + 12){ // DOUBLE INDIRECT BLOCK
+            // NOTE: For floppy disk lbk would be greater than 268 (inclusive)
             
             
             int double_indirect_block;
@@ -104,6 +109,19 @@ int my_write(int fd, char* buf, int nbytes){
 
             if(double_indirect_block == 0){ // if no double indrect block, create it
                 printf("my_write : Need to add a double indirect datablock...\n");
+
+                // print next block ================
+                char temp[BLKSIZE];
+                int chunk;
+                if(nbytes < remain){
+                    chunk = nbytes; // if bytes left to write does not expand entire data block -> chunk is nbytes
+                }else{
+                    chunk = remain; // if the rest of data block can be written and still remaining nbytes -> chunk is remain
+                }
+                strncpy(temp, buf + buf_loc, chunk);
+                printf("\n\n%s\n\n", temp);
+                // =================================
+
                 table->minodePtr->INODE.i_block[13] = double_indirect_block = make_indirect_block(dev); //assign indirect i_block
                 // Note: We can still use the indirect function here because both indirect and double indirect blocks set all entries to int 0
 
@@ -115,13 +133,14 @@ int my_write(int fd, char* buf, int nbytes){
 
             lbk -= (BLKSIZE / 4) + 12; //since this is after the first 12 i_blocks and indirect blocks, shift blk value
 
-            d_block = get_double_indirect_block(dev, double_indirect_block, lbk); // get double indirect block number
+            finding_block: //goto statement in case get_double_indirect_block fails
+            d_block = get_double_indirect_block(dev, double_indirect_block, lbk); // get direct block from double indirect block
 
             if(d_block == -1){ //could not get data block from double indirect block
                 printf("my_write unsuccessful\n");
                 return -1;
             }else if(d_block == -2){ // ADD NEW INDIRECT DATA BLOCK TO DOUBLE INDIRECT BLOCK
-                // note: if get_double_indirect_block returns -2 -> it is an empty entry
+                // note: if get_double_indirect_block returns -2 -> it is an empty double indirect entry
                 nblk = make_indirect_block(dev); // make a new indirect block
 
                 
@@ -136,7 +155,7 @@ int my_write(int fd, char* buf, int nbytes){
                 }
                 printf("my_write : allocating a new indirect datablock to double indirect block...\n");
                 
-                continue; // try again, go back to top of while loop
+                goto finding_block; // try again
 
             }else if(d_block == 0){ // ADD NEW DATA BLOCK ENTRY TO INDIRECT DATA BLOCK WITHIN DOUBLE INDIRECT DATABLOCK
                 // note: if get_double_indirect_block returns 0 -> The indirect block direct block entry was 0
@@ -157,7 +176,7 @@ int my_write(int fd, char* buf, int nbytes){
                 }
 
                 printf("my_write : allocating a new datablock (double-indirectly) for file...\n");
-                continue; // try again, go back to top of while loop
+                goto finding_block; // try again
 
             }
             // If this point is reached: The block within indirect block within the double indirect block was found
@@ -191,7 +210,7 @@ int my_write(int fd, char* buf, int nbytes){
         }else{
             chunk = remain; // if the rest of data block can be written and still remaining nbytes -> chunk is remain
         }
-
+        printf("\t-> writing %d bytes to block %d, [%d for this file]\n", chunk, d_block, saved_lbk);
         memcpy(cp, buf + buf_loc, chunk); //write a chunk of data to the data block
         
         nbytes -= chunk; 
@@ -316,7 +335,7 @@ int my_cp(char* src, char* dest){
 
 
     while(n = my_read(fd, buf, BLKSIZE)){ // read src in block size chunks
-
+        printf("\n");
         if(n == -1){ //error with my_read
             printf("cp : catastrophic error reading src\n");
             printf("cp unsuccessful\n");
@@ -328,8 +347,7 @@ int my_cp(char* src, char* dest){
 
         }
         m = my_write(gd, buf, n); // write n bytes to dest
-        printf("Wrote: %d\n", m);
-        if(m == -1){ //error with my_write
+        if(m == -1 || m == 0){ //error with my_write
             printf("cp : catastrophic error writing to dest\n");
             printf("cp unsuccessful\n");
 

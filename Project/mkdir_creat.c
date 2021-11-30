@@ -150,10 +150,10 @@ int tst_bit(char *buf, int bit){ // in Chapter 11.3.1
     if(buf[i] & (1 << j)){
         return 1;
     }
-    printf("bit: %d\t", bit);
-    print_byte(buf[i]);
-    printf(" -> loc %d: ", j);
-    printf("is 0\n");
+    //printf("bit: %d\t", bit);
+    //print_byte(buf[i]);
+    //printf(" -> loc %d: ", j);
+    //printf("is 0\n");
     return 0;
 }
 
@@ -192,12 +192,12 @@ int set_bit(char *buf, int bit){ // in Chapter 11.3.1
         
         Places a 1 bit in the 3rd bit of this byte (before: 0001 0100, after: 0001 1100)
     */
-    printf("New byte:\t");
-    print_byte(buf[i]);
-    printf(" to ");
+    //printf("New byte:\t");
+    //print_byte(buf[i]);
+    //printf(" to ");
     buf[i] |= (1 << j); // set byte i's, j bit to 1
-    print_byte(buf[i]);
-    printf("\n");
+    //print_byte(buf[i]);
+    //printf("\n");
 
     return 0;
 }
