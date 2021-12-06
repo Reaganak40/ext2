@@ -27,6 +27,7 @@ MINODE *root;
 PROC   proc[NPROC], *running;
 int nfd; // number of file descriptors for the running process
 OFT oft[NOFT];
+MOUNT mountTable[NMOUNT];  // set all dev = 0 in init()
 
 
 char gpath[128]; // global for tokenized components
@@ -48,6 +49,9 @@ char line[128], cmd[32], pathname[128];
 #include "open_close_lseek.c"
 #include "read_cat.c"
 #include "write_cp.c"
+
+// level-3 source files
+#include "mount_umount.c"
 
 /*****************************************************
 *
@@ -72,6 +76,11 @@ int init()
     mip->mounted = 0;
     mip->mptr = 0;
   }
+  //Initialize all mtables to 0 (no tables)
+  for(i=0; i < NMOUNT; i++){
+     mountTable[i].dev = 0;
+  }
+
 
   //Initialize all procs to 0 (no procs)
   for (i=0; i<NPROC; i++){
@@ -95,6 +104,7 @@ int init()
   }
 }
 
+char *disk = "disk2"; // Disk for mount_root
 /*****************************************************
 *
 *  Name:    mount root
@@ -104,11 +114,22 @@ int init()
 *****************************************************/
 int mount_root()
 {  
-  printf("mount_root()\n");
-  root = iget(dev, 2); // 2nd inode is always root in ext2 file system
+   printf("mount_root()\n");
+
+   mountTable[0].dev = dev;
+   mountTable[0].ninodes = ninodes;
+   mountTable[0].nblocks = nblocks;
+   mountTable[0].bmap = bmap;
+   mountTable[0].imap = imap;
+   mountTable[0].iblk = iblk;
+   strcpy(mountTable[0].name, disk);
+   strcpy(mountTable[0].mount_name, "/");
+   
+
+
+   root = iget(dev, 2); // 2nd inode is always root in ext2 file system
 }
 
-char *disk = "disk2"; // changed to 'disk2' for level 2
 /*****************************************************
 *
 *  Name:    Main
@@ -208,7 +229,15 @@ int main(int argc, char *argv[ ])
        my_cat(pathname);
     else if (strcmp(cmd, "cp")==0){
        if(!add_second_pathname(line)) //0 if second pathname given
-        cp_pathname(pathname);
+         cp_pathname(pathname);
+    }
+    else if (strcmp(cmd, "mount")==0){
+       if(strlen(pathname) == 0){ // if 0 argument or 2 arguments run mount
+         my_mount(pathname);  
+         continue;
+       }
+       if(!add_second_pathname(line)) //0 if second pathname given
+         my_mount(pathname);
     }
     else if (strcmp(cmd, "quit")==0)
        quit();

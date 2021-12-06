@@ -21,7 +21,19 @@ DIR   *dp;
 #define NPROC       2
 #define NFD        16
 #define NOFT       64
+#define NMOUNT      8
 
+typedef struct Mount{
+  int    dev;       // dev (opened vdisk fd number) 0 means FREE 
+  int    ninodes;   // from superblock
+  int    nblocks;
+  int    bmap;      // from GD block  
+  int    imap;
+  int    iblk;
+  struct Minode *mounted_inode;
+  char   name[64];  // device name, e.g. mydisk
+  char   mount_name[64]; // mounted DIR pathname
+} MOUNT;
 
 // MEMORY INODE
 typedef struct minode{
