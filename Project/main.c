@@ -187,6 +187,7 @@ int main(int argc, char *argv[ ])
   printf("  link    unlink    symlink   readlink   quit\n");
   printf(" ***********************************************\n");
   while(1){ //shell loop
+    printf("dev: %d\n", dev);
     printf("input command : ");
     fgets(line, 128, stdin);  //get command from user
     line[strlen(line)-1] = 0;

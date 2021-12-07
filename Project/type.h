@@ -30,7 +30,7 @@ typedef struct Mount{
   int    bmap;      // from GD block  
   int    imap;
   int    iblk;
-  struct Minode *mounted_inode;
+  struct minode *mounted_inode;
   char   name[64];  // device name, e.g. mydisk
   char   mount_name[64]; // mounted DIR pathname
 } MOUNT;
@@ -43,7 +43,7 @@ typedef struct minode{
   int dirty;             // 0 for clean, 1 for modified
 
   int mounted;           // for level-3
-  struct mntable *mptr;  // for level-3
+  struct Mount *mptr;    // for level-3
 }MINODE;
 
 typedef struct oft{ //OpenFileTable

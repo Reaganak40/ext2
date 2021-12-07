@@ -20,6 +20,8 @@ extern OFT oft[NOFT];
 
 extern char gpath[128];
 extern char *name[64];
+extern MOUNT mountTable[NMOUNT]; 
+
 extern int n;
 
 extern int nfd;
@@ -348,6 +350,8 @@ MINODE *iget(int dev, int ino)
   int blk, offset;
   INODE *ip;
 
+  int table_loc;
+
   for (i=0; i<NMINODE; i++){
     mip = &minode[i];
     if (mip->refCount && mip->dev == dev && mip->ino == ino){ //if target minode is currently being used, its on this device, and it matches ino (inode number)
@@ -358,6 +362,13 @@ MINODE *iget(int dev, int ino)
   }
   //if the minode with desired ino was not found
 
+  for(int i = 0; i < NMOUNT; i++){ // determine where device info is on table for lookup
+     if(mountTable[i].dev == dev){
+        table_loc = i;
+        break;
+     }
+  }
+
   for (i=0; i<NMINODE; i++){
     mip = &minode[i];
     if (mip->refCount == 0){ //go to next unused minode slot
@@ -367,7 +378,7 @@ MINODE *iget(int dev, int ino)
        mip->ino = ino;
 
        // get INODE of ino to buf    
-       blk    = (ino-1)/8 + iblk; // blk is set the Block that has the requested inode
+       blk    = (ino-1)/8 + mountTable[table_loc].iblk; // blk is set the Block that has the requested inode
        offset = (ino-1) % 8;      // offset is where on that Block the inode is found
        // NOTE: We divide by 8 because there can only be 8 inodes per block, we subtract 1 to get the beginning of the inode
 
@@ -418,11 +429,11 @@ void iput(MINODE *mip)
    block = (mip->ino - 1) / 8 + iblk; //get the block number that contains this inode
    offset = (mip->ino - 1) % 8; // which inode in the block this inode is
 
-   get_block(dev, block, buf); // start reading at inode block
+   get_block(mip->dev, block, buf); // start reading at inode block
    ip = (INODE*)buf + offset; // ip is the inode we are looking for
 
    *ip = mip->INODE; // overwrite inode
-   put_block(dev, block, buf); //write new changes back to block
+   put_block(mip->dev, block, buf); //write new changes back to block
 
    //midalloc
    
@@ -507,6 +518,7 @@ int getino(char *pathname)
   tokenize(pathname); //divide pathname into dir components
 
   for (i=0; i<n; i++){
+      
       printf("===========================================\n");
       printf("getino: i=%d name[%d]=%s\n", i, i, name[i]);
  
@@ -525,6 +537,25 @@ int getino(char *pathname)
 
       iput(mip);
       mip = iget(dev, ino); // create new minode for that child directory
+
+      if(mip->mounted){ // IF THIS IS A MOUNT MINODE
+         int ndev = mip->mptr->dev;
+
+         iput(mip);  // put back current minode before switching devices
+         dev = ndev;
+
+         for(int i = 0; i < NMOUNT; i++){ // switch to mount device
+
+            if(mountTable[i].dev == ndev){
+               mip = iget(dev, 2);
+               ino = 2;
+               break;
+            }
+
+
+         }
+      }
+
    }
 
    iput(mip); //no more reference to inode needed
@@ -546,6 +577,11 @@ int findmyname(MINODE *parent, u32 myino, char myname[ ])
   // WRITE YOUR code here
   // search parent's data block for myino; SAME as search() but by myino
   // copy its name STRING to myname[ ]
+  int old_dev = -1;
+  if(parent->dev != dev){ //if not on correct device
+      old_dev = dev;
+      dev = parent->dev;
+  }
 
   int i; 
   char *cp, c, sbuf[BLKSIZE], temp[256];
@@ -566,6 +602,10 @@ int findmyname(MINODE *parent, u32 myino, char myname[ ])
      if(dp->inode == myino){ //if dir's inode is myino -> this is the file we are looking for
          strncpy(myname, dp->name, dp->name_len); //get the name of file
          myname[dp->name_len] = 0;
+
+         if(old_dev != -1){ //if device was changed earlier, change back
+            dev = old_dev;
+         }
          return 0;
      }
      
@@ -586,6 +626,8 @@ int findmyname(MINODE *parent, u32 myino, char myname[ ])
 *           The .. directory inode number is returned.
 *
 *****************************************************/
+extern int ls_dir(MINODE *mip);
+
 int findino(MINODE *mip, u32 *myino) // myino = i# of . return i# of ..
 {
   // mip points at a DIR minode
@@ -600,6 +642,7 @@ int findino(MINODE *mip, u32 *myino) // myino = i# of . return i# of ..
   int inos_found[2] = { 0 }; // keeps track of inodes found (parent, and my_ino)
   
   get_block(dev, mip->INODE.i_block[0], buf); //goes to the data block that holds this directory info
+
   dp = (DIR *)buf;  //buf can be read as ext2_dir_entry_2 entries
   cp = buf;         //will always point to the start of dir_entry
   
@@ -618,12 +661,21 @@ int findino(MINODE *mip, u32 *myino) // myino = i# of . return i# of ..
      if(strcmp(temp, "..") == 0){ //the dir is .. -> its parent_ino
       if(inos_found[0] == 0){ //if parent ino hasn't been found
             parent_ino = dp->inode; // return my_ino
+
             inos_found[0] = 1; // my_ino found;
       }
+     }
 
-      if(inos_found[0] == 1 && inos_found[1] == 1){ //found all inodes
+     if(inos_found[0] == 1 && inos_found[1] == 1){ //found all inodes
+
+         if((parent_ino == 2) && (*myino == 2) && (dev != root->dev)){ //if on a mounted root directory
+               for(int i = 0; i < NMOUNT; i++){
+                  if(mountTable[i].dev == dev){
+                     parent_ino = mountTable[i].mounted_inode->ino; // point back to mount directory
+                  }
+               }
+         }
          break;
-      }
      }
 
      cp += dp->rec_len; //rec_len is entry length in bytes. So, cp will now point to the byte after the end of the file.

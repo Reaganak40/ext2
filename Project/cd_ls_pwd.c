@@ -1,5 +1,6 @@
 /************* cd_ls_pwd.c file **************/
 
+int ls_file(MINODE *mip, char *name);
 // functions used from other source files *******
 extern int findino(MINODE *mip, u32 *myino);
 extern int getino(char *pathname);
@@ -226,22 +227,48 @@ char *pwd(MINODE *wd)
 
     return 0;
   }
-
+  //printf("dev: %d, ino: %d\n", dev, wd->ino);
   parent_ino = findino(wd, &my_ino); //my_ino is this file's inode number. Parent inode is the parent directory of this file
+
+  if(wd->ino == 2){ //if at a mounted root
+
+    for(int i = 0; i < NMOUNT; i++){ // allocate device to mount table
+        if(mountTable[i].dev != 0 && mountTable[i].mounted_inode){
+          if(mountTable[i].mounted_inode->ino == parent_ino){
+            dev = mountTable[i].mounted_inode->dev; // change to new device
+            break;
+          }
+        }
+    }
+
+  }
 
   pip = iget(dev, parent_ino);       //pip becomes the minode for parent directory
 
+
+
   pwd_return_value = pwd(pip); // start working way back up to root
 
-  findmyname(pip, my_ino, name); //get the name of myino
+  if(pip->dev != wd->dev){ // if at a mount crossing point
+    strcpy(name, "");
+  }else{
+    findmyname(pip, my_ino, name); //get the name of myino
+  }
 
   if(pwd_return_value != 0){ //if the parent dir is not root
-    printf("/");
+
+    if(pip->dev == wd->dev){ // if not at a mount crossing point
+      printf("/");
+    }
   }
   printf("%s", name);
 
   if(wd == running->cwd){ //this was the last dir in the chain
     printf("\n");
+
+    if(dev != running->cwd->dev){ //if pwd traversed through different systems
+          dev = running->cwd->dev; // reset dev
+    }
   }
 
   return (char*)1;

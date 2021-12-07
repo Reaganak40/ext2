@@ -2,6 +2,9 @@
 
 int talloc(int ndev, int table_num);
 
+
+extern int my_mkdir(MINODE* pmip, char* _basename);
+
 MOUNT *getmptr(int dev){
 
     for(int i = 0; i < NMOUNT; i++){
@@ -103,7 +106,8 @@ int my_mount(char* pathname){
     // AT THIS POINT IN THE CODE: the second paramter has been verified as a safe
     // all potential errors accounted for: safe to run my mount
     // ===============================================================================
-    int fd;
+    int fd, ino;
+    MINODE* mip;
 
     printf("preparing mount...\n");
 
@@ -123,6 +127,19 @@ int my_mount(char* pathname){
     }
     printf("dev: %d\n", fd);
 
+    my_mkdir(pmip, new_basename); // create new directory where the mounted filesys will be
+    
+    ino = getino(second_pathname);
+
+    if(!ino){
+        printf("mount : could not get inode of mount directory\nmount unsuccessful\n");
+        return -1;
+    }
+
+    mip = iget(dev, ino);
+    mip->mounted = 1;   // mount flag is TRUE
+
+    int was_mounted = 0;
     for(int i = 0; i < NMOUNT; i++){ // allocate device to mount table
         if(mountTable[i].dev == 0){
            
@@ -130,10 +147,20 @@ int my_mount(char* pathname){
                 printf("mount unsuccessful\n");
                 return -1;
             }
+            
             strcpy(mountTable[i].name, pathname);
             strcpy(mountTable[i].mount_name, second_pathname);
+            
+            mip->mptr = &mountTable[i];
+            mountTable[i].mounted_inode = mip;
+            was_mounted = 1;
             break;
         }
+    }
+
+    if(!was_mounted){ //could not add disk to mount table
+        printf("mount : could not mount disk, mountTable full\nmount unsuccessful\n");
+        return -1;
     }
 
 
