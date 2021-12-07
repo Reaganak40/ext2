@@ -25,19 +25,26 @@ extern char *name[64];
 *****************************************************/
 int idalloc(int dev, int ino)
 {
-  int i;  
+  int i, table_loc;  
   char buf[BLKSIZE];
 
-  if (ino > ninodes){  
+  for(int g = 0; g < NOFT; g++){ //use table to refer to device info
+      if(mountTable[g].dev == dev){
+          table_loc = g;
+          break;
+      }
+  }
+
+  if (ino > mountTable[table_loc].ninodes){  
     printf("inumber %d out of range\n", ino);
     return -1;
   }
   
-  get_block(dev, imap, buf);  // get inode bitmap block into buf[]
+  get_block(dev, mountTable[table_loc].imap, buf);  // get inode bitmap block into buf[]
   
   clr_bit(buf, ino-1);        // clear bit ino-1 to 0
 
-  put_block(dev, imap, buf);  // write buf back
+  put_block(dev, mountTable[table_loc].imap, buf);  // write buf back
 
   return 0;
 }
@@ -51,19 +58,28 @@ int idalloc(int dev, int ino)
 *****************************************************/
 int bdalloc(int dev, int blk){
 
-    int i;  
+    int i, table_loc;
     char buf[BLKSIZE];
 
-    if (blk > nblocks){  
+
+    for(int g = 0; g < NOFT; g++){ //use table to refer to device info
+        if(mountTable[g].dev == dev){
+            table_loc = g;
+            break;
+        }
+    }
+
+
+    if (blk > mountTable[table_loc].nblocks){  
       printf("inumber %d out of range\n", blk);
       return -1;
     }
   
-    get_block(dev, bmap, buf);  // get block bitmap block into buf[]
+    get_block(dev, mountTable[table_loc].bmap, buf);  // get block bitmap block into buf[]
   
     clr_bit(buf, blk);        // clear block bit
 
-    put_block(dev, imap, buf);  // write buf back
+    put_block(dev, mountTable[table_loc].imap, buf);  // write buf back
 
     return 0;
 }
@@ -98,6 +114,7 @@ int clr_bit(char* buf, int bit){
 *
 *****************************************************/
 int rmdir_pathname(char* pathname){
+    int odev = dev; // keep track of original dev
     int ino, pino;
     MINODE* mip, *pmip;
 
@@ -110,6 +127,7 @@ int rmdir_pathname(char* pathname){
 
     if(!ino){ //if pathname does not lead anywhere
       printf("rmdir unsuccessful\n");
+      dev = odev; //reset back to orignal dev
       return -1;
     }
 
@@ -118,6 +136,8 @@ int rmdir_pathname(char* pathname){
     if(is_dir(mip) != 0){ //if mip is not a directory
         printf("rmdir pathname : %s is not a directory\n", name[n-1]);
         printf("rmdir unsuccessful\n");
+        dev = odev; //reset back to orignal dev
+
         return -1;
     } 
 
@@ -131,6 +151,8 @@ int rmdir_pathname(char* pathname){
     if(dp->rec_len != BLKSIZE-12){ //if the .. directory does not span the data block, that means there are other dir entries
         printf("rmdir pathname : %s is not empty\n", name[n-1]);
         printf("rmdir unsuccessful\n");
+        dev = odev; //reset back to orignal dev
+
         return -1;
 
     }
@@ -143,6 +165,7 @@ int rmdir_pathname(char* pathname){
     findmyname(pmip, ino, fname); // get name of dir to remove
     if(rm_child(pmip, fname) != 0){ // remove child from parent directory, 0 means successful
       printf("rmdir unsuccessful\n");
+      dev = odev; //reset back to orignal dev
       return -1;
     }         
 
@@ -154,6 +177,7 @@ int rmdir_pathname(char* pathname){
     bdalloc(dev, mip->INODE.i_block[0]); // deallocate the data block used by removed directory
     idalloc(dev, ino);                   // deallocate the inode used by removed directory
 
+    dev = odev; //reset back to orignal dev
     return 0;
 
 

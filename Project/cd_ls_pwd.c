@@ -160,6 +160,7 @@ int ls_dir(MINODE *mip)
      dp = (DIR *)cp;    //dp will now start at cp (the next entry)
   }
   printf("\n");
+
 }
 
 /*****************************************************
@@ -171,6 +172,7 @@ int ls_dir(MINODE *mip)
 *****************************************************/
 int ls(char* pathname)
 {
+  int odev = dev; // originally device (keep track bc dev might change)
   //printf("ls: list CWD only! YOU FINISH IT for ls pathname\n");
 
   if(strlen(pathname) == 0){ //no ls pathname
@@ -196,6 +198,8 @@ int ls(char* pathname)
   }
 
   ls_dir(mip); //run ls_dir on the pathname
+  dev = odev; //reset dev to pre-ls
+  
   return 0;
   
 }

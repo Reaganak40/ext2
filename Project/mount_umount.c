@@ -111,24 +111,6 @@ int my_mount(char* pathname){
     if((ino = getino(second_pathname)) > 0){ //if second pathname has an inode, that means new file already exists
         mip = iget(dev, ino);
 
-        // MAKE SURE DIR IS EMPTY
-
-        get_block(dev, mip->INODE.i_block[0], buf); //goes to the data block that holds the first few entries
-
-        dp = (DIR *)buf;  //buf can be read as ext2_dir_entry_2 entries
-        cp = buf;         //will always point to the start of dir_entry
-
-        cp += dp->rec_len; // read past . directory
-        dp = (DIR *)cp;    //dp will now start at cp (the .. directory)
-
-        printf("dp->rec_len: %d\n", dp->rec_len);
-        if(dp->rec_len != BLKSIZE-12){ //if the .. directory does not span the data block, that means there are other dir entries
-            printf("mount : %s is not empty\n", name[n-1]);
-            printf("mount unsuccessful\n");
-            return -1;
-
-        }
-
 
     }else{ // if it doesn't exist, create it
 
@@ -199,13 +181,6 @@ int my_mount(char* pathname){
 int talloc(int ndev, int table_num){
 
     char buf[BLKSIZE];
-    mountTable[table_num].ninodes = ninodes;
-    mountTable[table_num].nblocks = nblocks;
-    mountTable[table_num].bmap = bmap;
-    mountTable[table_num].imap = imap;
-    mountTable[table_num].iblk = iblk;
-
-
 
     /********** read super block  ****************/
     get_block(ndev, 1, buf); // BLOCK #1 is reserved for Superblock

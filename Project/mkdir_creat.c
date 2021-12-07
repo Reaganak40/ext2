@@ -79,16 +79,25 @@ int is_dir(MINODE* mip){
 *****************************************************/
 int ialloc(int dev)  // allocate an inode number from inode_bitmap
 {
-  int  i;
+  int  i, table_loc = 0;
   char buf[BLKSIZE];
 
-  // read inode_bitmap block
-  get_block(dev, imap, buf);
+   for(int g = 0; g < NOFT; g++){ //use table to refer to device info
+      if(mountTable[g].dev == dev){
+          table_loc = g;
+          break;
+      }
+  }
 
-  for (i=0; i < ninodes; i++){
+  // read inode_bitmap block
+  get_block(dev, mountTable[table_loc].imap, buf);
+
+
+
+  for (i=0; i < mountTable[table_loc].ninodes; i++){
     if (tst_bit(buf, i)==0){ //returns the bit value (if there is no bit there)
         set_bit(buf, i);
-        put_block(dev, imap, buf);
+        put_block(dev, mountTable[table_loc].imap, buf);
         printf("allocated ino = %d\n", i+1); // bits count from 0; ino from 1
         return i+1;
     }
@@ -106,16 +115,23 @@ int ialloc(int dev)  // allocate an inode number from inode_bitmap
 *****************************************************/
 int balloc(int dev){ //same as ialloc but for the block bitmap
 
-    int  i;
+    int  i, table_loc = 0;
     char buf[BLKSIZE];
 
-    // read inode_bitmap block
-    get_block(dev, bmap, buf);
+    for(int g = 0; g < NOFT; g++){ //use table to refer to device info
+      if(mountTable[g].dev == dev){
+          table_loc = g;
+          break;
+      }
+  }
 
-    for (i=0; i < nblocks; i++){
+    // read inode_bitmap block
+    get_block(dev, mountTable[table_loc].bmap, buf);
+
+    for (i=0; i < mountTable[table_loc].nblocks; i++){
         if (tst_bit(buf, i)==0){ //returns the bit value (if there is no bit there)
             set_bit(buf, i);
-            put_block(dev, bmap, buf);
+            put_block(dev, mountTable[table_loc].bmap, buf);
             printf("allocated block = %d\n", i+1); // bits count from 0; ino from 1
             return i+1;
         }
@@ -327,6 +343,7 @@ int my_creat(MINODE* pmip, char* _basename){
 *
 *****************************************************/
 int mkdir_pathname(char* pathname){
+    int odev = dev; // keep track of original device in case of pathname swtiches devices
 
     //divide pathname into dirname and basename
     int from_cwd, pino;
@@ -365,6 +382,8 @@ int mkdir_pathname(char* pathname){
 
         if(!pino){ //dirname does not exist
             printf("mkdir unsuccessful\n");
+            dev = odev; //reset back to original dev
+
             return -1;
         }
 
@@ -375,6 +394,8 @@ int mkdir_pathname(char* pathname){
     }
     if(strlen(dirname) && is_dir(pmip) != 0){ //pmip is not a directory (only check if not cwd)
         printf("dirname is not a directory\nmkdir unsuccessful\n");
+        dev = odev; //reset back to original dev
+
         return -1;
     }
 
@@ -388,7 +409,11 @@ int mkdir_pathname(char* pathname){
     //all checks made, safe to mkdir
     
     printf("mkdir dirname and basename safe, preparing mkdir ...\n");
-    return my_mkdir(pmip, _basename); 
+
+    int success = my_mkdir(pmip, _basename); 
+
+    dev = odev; //reset back to original dev
+    return success;
 }
 
 /*****************************************************
@@ -402,6 +427,7 @@ int mkdir_pathname(char* pathname){
 *
 *****************************************************/
 int my_mkdir(MINODE* pmip, char* _basename){
+    printf("mip ino: %d, dev = %d\n", pmip->ino, pmip->dev);
     int ino, blk;
     MINODE* mip;
     INODE inode;

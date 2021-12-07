@@ -35,7 +35,7 @@ char *name[64];  // assume at most 64 components in pathname
 int   n;         // number of component strings
 
 int fd, dev;
-int nblocks, ninodes, bmap, imap, iblk;
+//int nblocks, ninodes, bmap, imap, iblk;
 char line[128], cmd[32], pathname[128];
 
 // level-1 source files
@@ -116,6 +116,32 @@ int mount_root()
 {  
    printf("mount_root()\n");
 
+   int iblk, imap, bmap, nblocks, ninodes;
+   char buf[BLKSIZE];
+
+
+    /********** read super block  ****************/
+  get_block(dev, 1, buf); // BLOCK #1 is reserved for Superblock
+  sp = (SUPER *)buf;      // sp (super-pointer) reads buf as a ext2_super_block
+
+  /* verify it's an ext2 file system ***********/
+  if (sp->s_magic != 0xEF53){ // 0xEF53 specifies that its an ext2 file system
+      printf("magic = %x is not an ext2 filesystem\n", sp->s_magic);
+      exit(1);
+  }     
+  printf("EXT2 FS OK\n");
+  ninodes = sp->s_inodes_count; //how many inodes are on the disk
+  nblocks = sp->s_blocks_count; //how many blocks are on the disk
+
+  /********** Group Descriptor Block *************/
+  get_block(dev, 2, buf); //  BLOCK #2 is reserved for Group Descriptor Block
+  gp = (GD *)buf;         //  gd (group descriptor pointer) reads buf as a ext2_group_desc
+
+  bmap = gp->bg_block_bitmap; // bmap info received from group descriptor block
+  imap = gp->bg_inode_bitmap; // imap info received from group descriptor block
+  iblk = gp->bg_inode_table;  // iblk info received from group descriptor block
+  printf("bmp=%d imap=%d inode_start = %d\n", bmap, imap, iblk);
+
    mountTable[0].dev = dev;
    mountTable[0].ninodes = ninodes;
    mountTable[0].nblocks = nblocks;
@@ -140,7 +166,6 @@ int mount_root()
 int main(int argc, char *argv[ ])
 {
   int ino;
-  char buf[BLKSIZE];
   //opens disk for read and write
   printf("checking EXT2 FS ....");
   if ((fd = open(disk, O_RDWR)) < 0){
@@ -149,28 +174,6 @@ int main(int argc, char *argv[ ])
   }
 
   dev = fd;    // global dev same as this fd   
-
-  /********** read super block  ****************/
-  get_block(dev, 1, buf); // BLOCK #1 is reserved for Superblock
-  sp = (SUPER *)buf;      // sp (super-pointer) reads buf as a ext2_super_block
-
-  /* verify it's an ext2 file system ***********/
-  if (sp->s_magic != 0xEF53){ // 0xEF53 specifies that its an ext2 file system
-      printf("magic = %x is not an ext2 filesystem\n", sp->s_magic);
-      exit(1);
-  }     
-  printf("EXT2 FS OK\n");
-  ninodes = sp->s_inodes_count; //how many inodes are on the disk
-  nblocks = sp->s_blocks_count; //how many blocks are on the disk
-
-  /********** Group Descriptor Block *************/
-  get_block(dev, 2, buf); //  BLOCK #2 is reserved for Group Descriptor Block
-  gp = (GD *)buf;         //  gd (group descriptor pointer) reads buf as a ext2_group_desc
-
-  bmap = gp->bg_block_bitmap; // bmap info received from group descriptor block
-  imap = gp->bg_inode_bitmap; // imap info received from group descriptor block
-  iblk = gp->bg_inode_table;  // iblk info received from group descriptor block
-  printf("bmp=%d imap=%d inode_start = %d\n", bmap, imap, iblk);
 
   init();       // initilize all globals (procs and minodes)
   mount_root(); // Sets root pointer to an minode that contains the root dir inode
