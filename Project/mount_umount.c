@@ -43,12 +43,6 @@ int my_mount(char* pathname){
 
     printf("pathname1: %s\npathname2: %s\n", pathname, second_pathname);
 
-    if(getino(second_pathname) > 0){ //if second pathname has an inode, that means new file already exists
-        printf("mount : %s path already exists\nmount unsuccessful\n", second_pathname);
-        return -1;
-
-    }
-
     if(getino(second_pathname) == -1){ //if second pathname is invalid
         printf("mount : %s is not a valid pathname\nmount unsuccessful\n", second_pathname);
         return -1;
@@ -108,13 +102,52 @@ int my_mount(char* pathname){
     // ===============================================================================
     int fd, ino;
     MINODE* mip;
+    char buf[BLKSIZE];
+    DIR *dp;
+    char *cp;
+    
 
     printf("preparing mount...\n");
+    if((ino = getino(second_pathname)) > 0){ //if second pathname has an inode, that means new file already exists
+        mip = iget(dev, ino);
+
+        // MAKE SURE DIR IS EMPTY
+
+        get_block(dev, mip->INODE.i_block[0], buf); //goes to the data block that holds the first few entries
+
+        dp = (DIR *)buf;  //buf can be read as ext2_dir_entry_2 entries
+        cp = buf;         //will always point to the start of dir_entry
+
+        cp += dp->rec_len; // read past . directory
+        dp = (DIR *)cp;    //dp will now start at cp (the .. directory)
+
+        printf("dp->rec_len: %d\n", dp->rec_len);
+        if(dp->rec_len != BLKSIZE-12){ //if the .. directory does not span the data block, that means there are other dir entries
+            printf("mount : %s is not empty\n", name[n-1]);
+            printf("mount unsuccessful\n");
+            return -1;
+
+        }
+
+
+    }else{ // if it doesn't exist, create it
+
+        my_mkdir(pmip, new_basename); // create new directory where the mounted filesys will be
+        ino = getino(second_pathname);
+
+        if(!ino){
+            printf("mount : could not get inode of mount directory\nmount unsuccessful\n");
+            return -1;
+        }
+        mip = iget(dev, ino);
+
+    }
 
     for(int i = 0; i < NMOUNT; i++){ // check that the filesys is not already mounted
         if(mountTable[i].dev != 0){
-            if(strcmp(mountTable[i].name, pathname) == 0){
+            if(strcmp(mountTable[i].name, pathname) == 0){ //pathname is the first parameter 'disk name'
                 printf("mount : %s is already opened.\nmount unsuccessful\n", pathname);
+                iput(mip);
                 return -1;
             }
         }
@@ -123,21 +156,17 @@ int my_mount(char* pathname){
     //opens disk for read and write
     if ((fd = open(pathname, O_RDWR)) < 0){
         printf("open %s failed\nmount unsuccessful\n", pathname);
+        iput(mip);
+
         return -1;
     }
     printf("dev: %d\n", fd);
-
-    my_mkdir(pmip, new_basename); // create new directory where the mounted filesys will be
     
-    ino = getino(second_pathname);
-
-    if(!ino){
-        printf("mount : could not get inode of mount directory\nmount unsuccessful\n");
-        return -1;
-    }
-
-    mip = iget(dev, ino);
+    // safe to start mounting
     mip->mounted = 1;   // mount flag is TRUE
+
+    
+
 
     int was_mounted = 0;
     for(int i = 0; i < NMOUNT; i++){ // allocate device to mount table
