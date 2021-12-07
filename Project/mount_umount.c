@@ -1,6 +1,6 @@
 /************* mount_umount.c file **************/
 
-
+int talloc(int ndev, int table_num);
 
 MOUNT *getmptr(int dev){
 
@@ -20,10 +20,10 @@ int my_mount(char* pathname){
             if (mountTable[i].dev != 0){
                 printf("%s on %s\n", mountTable[i].name, mountTable[i].mount_name);
 
-                printf("\t dev = %d (EXT2)\n", mountTable[0].dev); //for this project all mounted systems are EXT2
-                printf("\t ninodes = %d\n", mountTable[0].ninodes);
-                printf("\t nblocks = %d\n", mountTable[0].nblocks);
-                printf("\t iblk = %d\n", mountTable[0].iblk);
+                printf("\t dev = %d (EXT2)\n", mountTable[i].dev); //for this project all mounted systems are EXT2
+                printf("\t ninodes = %d\n", mountTable[i].ninodes);
+                printf("\t nblocks = %d\n", mountTable[i].nblocks);
+                printf("\t iblk = %d\n", mountTable[i].iblk);
             }
         }
         printf("\n");
@@ -126,15 +126,15 @@ int my_mount(char* pathname){
     for(int i = 0; i < NMOUNT; i++){ // allocate device to mount table
         if(mountTable[i].dev == 0){
            
-            talloc(fd, i); //allocate system information to table
+            if(talloc(fd, i) == -1){ //allocate system information to table
+                printf("mount unsuccessful\n");
+                return -1;
+            }
             strcpy(mountTable[i].name, pathname);
             strcpy(mountTable[i].mount_name, second_pathname);
             break;
         }
     }
-
-
-
 
 
     return 0;
@@ -143,8 +143,6 @@ int my_mount(char* pathname){
 int talloc(int ndev, int table_num){
 
     char buf[BLKSIZE];
-
-    mountTable[table_num].dev = ndev;
     mountTable[table_num].ninodes = ninodes;
     mountTable[table_num].nblocks = nblocks;
     mountTable[table_num].bmap = bmap;
@@ -160,20 +158,20 @@ int talloc(int ndev, int table_num){
     /* verify it's an ext2 file system ***********/
     if (sp->s_magic != 0xEF53){ // 0xEF53 specifies that its an ext2 file system
         printf("magic = %x is not an ext2 filesystem\n", sp->s_magic);
-        exit(1);
+        return -1;
     }     
-  printf("EXT2 FS OK\n");
-  ninodes = sp->s_inodes_count; //how many inodes are on the disk
-  nblocks = sp->s_blocks_count; //how many blocks are on the disk
+    mountTable[table_num].ninodes = sp->s_inodes_count; //how many inodes are on the disk
+    mountTable[table_num].nblocks = sp->s_blocks_count; //how many blocks are on the disk
 
-  /********** Group Descriptor Block *************/
-  get_block(dev, 2, buf); //  BLOCK #2 is reserved for Group Descriptor Block
-  gp = (GD *)buf;         //  gd (group descriptor pointer) reads buf as a ext2_group_desc
+    /********** Group Descriptor Block *************/
+    get_block(ndev, 2, buf); //  BLOCK #2 is reserved for Group Descriptor Block
+    gp = (GD *)buf;          //  gd (group descriptor pointer) reads buf as a ext2_group_desc
 
-  bmap = gp->bg_block_bitmap; // bmap info received from group descriptor block
-  imap = gp->bg_inode_bitmap; // imap info received from group descriptor block
-  iblk = gp->bg_inode_table;  // iblk info received from group descriptor block
-  printf("bmp=%d imap=%d inode_start = %d\n", bmap, imap, iblk);
+    mountTable[table_num].bmap  = gp->bg_block_bitmap; // bmap info received from group descriptor block
+    mountTable[table_num].imap  = gp->bg_inode_bitmap; // imap info received from group descriptor block
+    mountTable[table_num].iblk  = gp->bg_inode_table;  // iblk info received from group descriptor block
+    mountTable[table_num].dev = ndev;
 
+    return 0;
 
 }
