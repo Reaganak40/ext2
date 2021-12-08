@@ -191,6 +191,13 @@ int my_umount(char* pathname){
 
     MINODE* mip, *pmip;
 
+    if((strcmp(pathname, "/")) == 0 || (strcmp(mountTable[0].name, pathname) == 0)){ //trying to umount root
+        printf("umount : you cannot umount root\n");
+        dev = odev; //reset back to original dev
+
+        return -1;
+    }
+
     // GET DIRNAME
     tokenize(pathname);
     //determine to start at root or cwd
@@ -255,6 +262,24 @@ int my_umount(char* pathname){
         }
     }
 
+    int valid_message = 0;
+    for(int i = 0; i < NMINODE; i++){
+        if (minode[i].dev == dev){ //check to see if any file is active in mounted filesys
+            if(!valid_message){
+                printf("Could not umount. Files are still busy.\n");
+                valid_message = 1;
+            }
+
+            printf("\tminode #%4d: ino: %4d (dev %d)\n", i, minode[i].ino, minode[i].dev);
+
+        }
+    }
+
+    if(valid_message){ //if busy files were found
+        printf("umount unsuccessful\n");
+        dev = odev;
+        return -1;
+    }
 
     // AT THIS POINT: minode has been found as is a mounted minode
     if(close(dev)){       // close fd for this device
