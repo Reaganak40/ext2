@@ -3,7 +3,7 @@
 // Function declarations ****************************************
 int my_symlink(MINODE* pmip, char* old_name, char* _basename);
 int is_link(MINODE* mip);
-int readlink(char* pathname, char name[]);
+int my_readlink(char* pathname, char name[]);
 // **************************************************************
 
 extern int getino(char *pathname);
@@ -154,7 +154,7 @@ int call_readlink(char* pathname){
     char name[60];
     int size;
 
-    size = readlink(pathname, name);
+    size = my_readlink(pathname, name);
 
     if(size == -1){
         return -1;
@@ -174,7 +174,7 @@ int call_readlink(char* pathname){
 *           data block, as well as that names strlen
 *
 *****************************************************/
-int readlink(char* pathname, char name[]){
+int my_readlink(char* pathname, char name[]){
 
     int ino, file_size;
     MINODE* mip;

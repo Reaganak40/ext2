@@ -28,7 +28,7 @@ int idalloc(int dev, int ino)
   int i, table_loc;  
   char buf[BLKSIZE];
 
-  for(int g = 0; g < NOFT; g++){ //use table to refer to device info
+  for(int g = 0; g < NMOUNT; g++){ //use table to refer to device info
       if(mountTable[g].dev == dev){
           table_loc = g;
           break;
@@ -62,7 +62,7 @@ int bdalloc(int dev, int blk){
     char buf[BLKSIZE];
 
 
-    for(int g = 0; g < NOFT; g++){ //use table to refer to device info
+    for(int g = 0; g < NMOUNT; g++){ //use table to refer to device info
         if(mountTable[g].dev == dev){
             table_loc = g;
             break;

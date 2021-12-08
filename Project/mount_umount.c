@@ -159,8 +159,12 @@ int my_mount(char* pathname){
                 return -1;
             }
             
+            char mount_name[128];
+            strcpy(mount_name, "");
+            pwd(mip, mount_name); //since mount_name is not 0, pwd will record output to mount_name
+
             strcpy(mountTable[i].name, pathname);
-            strcpy(mountTable[i].mount_name, second_pathname);
+            strcpy(mountTable[i].mount_name, mount_name);
             
             mip->mptr = &mountTable[i];
             mountTable[i].mounted_inode = mip;
@@ -178,6 +182,95 @@ int my_mount(char* pathname){
     return 0;
 }
 
+int my_umount(char* pathname){
+
+    int odev = dev; // keep track of original dev
+    //divide pathname into dirname and basename
+    int pino, ino, table_loc = 0;
+    char dirname[128], _basename[128], temp[255];
+
+    MINODE* mip, *pmip;
+
+    // GET DIRNAME
+    tokenize(pathname);
+    //determine to start at root or cwd
+    if(pathname[0] == '/'){
+            strcpy(dirname, "/"); //dirname is root
+        }else{  //dirname is cwd
+            strcpy(dirname, "");
+    }
+
+    //build the dirname
+    for(int i = 0; i < (n-1); i++){
+        strcat(dirname, name[i]);
+
+        if((i+1) < (n-1)){
+            strcat(dirname, "/");
+        }
+    }
+    
+
+    strcpy(_basename, name[n - 1]); //get the _basename from path
+    printf("dirname: %s\nbasename: %s\n", dirname, _basename);
+
+    if(strlen(dirname)){ //if a dirname was given
+        pino = getino(dirname); //get the inode number for the parent directory
+
+        if(!pino){ //dirname does not exist
+            printf("umount unsuccessful\n");
+            dev = odev; //reset back to original dev
+
+            return -1;
+        }
+
+        //dirname is legit, now check if it is a directory
+        pmip = iget(dev, pino); //create new minode for parent directory
+    }else{ //if in cwd
+        pmip = iget(dev, running->cwd->ino); //pmip becomes the cwd inode
+    }
+
+    // record the directory of parent
+    char mount_name[128];
+    strcpy(mount_name, "");
+    pwd(pmip, mount_name); //since mount_name is not 0, pwd will record output to mount_name
+    if(root != pmip){
+        strcat(mount_name, "/");
+
+    }
+    strcat(mount_name, _basename);
+
+    for(int i = 0; i < NMOUNT; i++){
+
+        if((mountTable[i].dev != 0) && (strcmp(mountTable[i].name, pathname) == 0) || (strcmp(mountTable[i].mount_name, mount_name) == 0) ){ //dev names match
+            mip = mountTable[i].mounted_inode;
+            dev = mountTable[i].dev;
+            table_loc = i;
+            break;
+        }
+
+        if(i == (NMOUNT - 1)){ //if no device found
+            printf("umount: %s is not a name for a mounted device\nmount unsuccessful\n", pathname);
+            dev = odev; //reset back to original dev
+            return -1;
+        }
+    }
+
+
+    // AT THIS POINT: minode has been found as is a mounted minode
+    if(close(dev)){       // close fd for this device
+        printf("umount: uh oh. could not close device\nmount unsuccessful\n");
+        return -1;
+    }
+
+    mip->mounted = 0; // remove mount flag
+    iput(mip);
+    mountTable[table_loc].dev = 0; // deallocate device from mount table
+
+
+    dev = odev; //reset back to original dev
+    return 0;
+
+}
 int talloc(int ndev, int table_num){
 
     char buf[BLKSIZE];

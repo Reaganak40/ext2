@@ -9,6 +9,7 @@
 #include <libgen.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "type.h"
 
@@ -208,7 +209,7 @@ int main(int argc, char *argv[ ])
     else if (strcmp(cmd, "cd")==0)
        cd(pathname);
     else if (strcmp(cmd, "pwd")==0)
-       pwd(running->cwd);
+       pwd(running->cwd, 0);
     else if (strcmp(cmd, "mkdir")==0)
        mkdir_pathname(pathname);
     else if (strcmp(cmd, "rmdir")==0)
@@ -243,6 +244,8 @@ int main(int argc, char *argv[ ])
        if(!add_second_pathname(line)) //0 if second pathname given
          my_mount(pathname);
     }
+    else if (strcmp(cmd, "umount")==0)
+       my_umount(pathname);
     else if (strcmp(cmd, "quit")==0)
        quit();
   }

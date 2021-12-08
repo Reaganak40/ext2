@@ -82,7 +82,7 @@ int ialloc(int dev)  // allocate an inode number from inode_bitmap
   int  i, table_loc = 0;
   char buf[BLKSIZE];
 
-   for(int g = 0; g < NOFT; g++){ //use table to refer to device info
+   for(int g = 0; g < NMOUNT; g++){ //use table to refer to device info
       if(mountTable[g].dev == dev){
           table_loc = g;
           break;
@@ -118,7 +118,7 @@ int balloc(int dev){ //same as ialloc but for the block bitmap
     int  i, table_loc = 0;
     char buf[BLKSIZE];
 
-    for(int g = 0; g < NOFT; g++){ //use table to refer to device info
+    for(int g = 0; g < NMOUNT; g++){ //use table to refer to device info
       if(mountTable[g].dev == dev){
           table_loc = g;
           break;
@@ -233,6 +233,7 @@ int set_bit(char *buf, int bit){ // in Chapter 11.3.1
 *****************************************************/
 int creat_pathname(char* pathname){
 
+    int odev = dev; // keep track of original dev
     //divide pathname into dirname and basename
     int from_cwd, pino;
     char dirname[128], _basename[128], temp[255];
@@ -241,20 +242,27 @@ int creat_pathname(char* pathname){
 
     if(getino(pathname) > 0){ //if given pathname already exists
         printf("creat_pathname : %s already exists\ncreat unsuccessful\n", pathname);
+        dev = odev; //reset back to original dev
         return -1;
     }
 
+    dev = odev; //reset back to original dev for second check
     if(getino(pathname) == -1){ //if second pathname is invalid
         printf("creat_pathname: %s is not a valid pathname\ncreat unsuccessful\n", pathname);
+        dev = odev; //reset back to original dev
         return -1;
 
     }
+
 
     if(strlen(pathname) == 0 || (strlen(pathname) == 1 && pathname[0] == '/')){ //if no pathname given or pathname is '/'
+        dev = odev; //reset back to original dev
 
         return -1;
     }
+
     tokenize(pathname);
+
     
     //determine to start at root or cwd
     if(pathname[0] == '/'){
@@ -277,11 +285,14 @@ int creat_pathname(char* pathname){
 
     printf("dirname: %s\nbasename: %s\n", dirname, _basename);
 
+    dev = odev; // reset to correctly get pino
     if(strlen(dirname)){ //if a dirname was given
         pino = getino(dirname); //get the inode number for the parent directory
 
         if(!pino){ //dirname does not exist
             printf("creat unsuccessful\n");
+            dev = odev; //reset back to original dev
+
             return -1;
         }
 
@@ -293,13 +304,19 @@ int creat_pathname(char* pathname){
 
     if(strlen(dirname) && is_dir(pmip) != 0){ //pmip is not a directory (only check if not cwd)
         printf("dirname is not a directory\ncreat unsuccessful\n");
+        dev = odev; //reset back to original dev
+
         return -1;
     }
     
     //all checks made, safe to creat
 
+    int success = my_creat(pmip, _basename);
 
-    return my_creat(pmip, _basename);
+    dev = odev; //reset back to original dev
+
+    return success;
+
 }
 
 /*****************************************************

@@ -213,7 +213,7 @@ int ls(char* pathname)
 *           printing the current dir along the way
 * 
 *****************************************************/
-char *pwd(MINODE *wd)
+char *pwd(MINODE *wd, char* record)
 {
 
   u32 my_ino, parent_ino;
@@ -223,7 +223,11 @@ char *pwd(MINODE *wd)
 
   
   if (wd == root){
-    printf("/");
+
+    if(record != 0)
+      strcat(record, "/");
+    else
+      printf("/");
 
     if(wd == running->cwd){ //this was the last dir in the chain
       printf("\n");
@@ -251,7 +255,7 @@ char *pwd(MINODE *wd)
 
 
 
-  pwd_return_value = pwd(pip); // start working way back up to root
+  pwd_return_value = pwd(pip, record); // start working way back up to root
 
   if(pip->dev != wd->dev){ // if at a mount crossing point
     strcpy(name, "");
@@ -262,10 +266,16 @@ char *pwd(MINODE *wd)
   if(pwd_return_value != 0){ //if the parent dir is not root
 
     if(pip->dev == wd->dev){ // if not at a mount crossing point
-      printf("/");
+        if(record != 0)
+      strcat(record, "/");
+      else
+        printf("/");
     }
   }
-  printf("%s", name);
+  if(record != 0)
+    strcat(record, name);
+  else
+    printf("%s", name);
 
   if(wd == running->cwd){ //this was the last dir in the chain
     printf("\n");

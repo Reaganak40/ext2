@@ -23,6 +23,7 @@ extern char *name[64];
 * 
 *****************************************************/
 int unlink_pathname(char* pathname){
+    int odev = dev; //keep track of original dev
     int ino, pino;
     MINODE* mip, *pmip;
     char dirname[128], _basename[128];
@@ -31,6 +32,7 @@ int unlink_pathname(char* pathname){
     
     if(!ino){ //if pathname does not exist
         printf("unlink pathname: %s does not exist.\nunlink unsuccessful\n", pathname);
+        dev = odev; //reset back to original device
         return -1;
     }
 
@@ -38,6 +40,8 @@ int unlink_pathname(char* pathname){
 
     if(is_dir(mip) == 0){ //if mip is directory, dont unlink
         printf("unlink pathname: %s is a directory.\nunlink unsuccessful\n", pathname);
+        dev = odev; //reset back to original device
+
         return -1;
     }
 
@@ -65,10 +69,12 @@ int unlink_pathname(char* pathname){
     printf("dirname: %s\nbasename: %s\n", dirname, _basename);
 
     if(strlen(dirname)){ //if a dirname was given
+        dev = odev; //reset back to original device
         pino = getino(dirname); //get the inode number for the parent directory
 
         if(!pino){ //dirname does not exist
-            printf("creat unsuccessful\n");
+            printf("unlink unsuccessful\n");
+            dev = odev; //reset back to original device
             return -1;
         }
 
@@ -76,11 +82,6 @@ int unlink_pathname(char* pathname){
         pmip = iget(dev, pino); //create new minode for parent directory
     }else{ //if in cwd
         pmip = iget(dev, running->cwd->ino); //pmip becomes the cwd inode
-    }
-
-    if(strlen(dirname) && is_dir(pmip) != 0){ //pmip is not a directory (only check if not cwd)
-        printf("dirname is not a directory\ncreat unsuccessful\n");
-        return -1;
     }
 
     if(rm_child(pmip, _basename) != 0){
@@ -111,6 +112,7 @@ int unlink_pathname(char* pathname){
     }
 
     iput(mip); //release mip
+    dev = odev; //reset back to original device
 
     return 0;
 }

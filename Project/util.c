@@ -426,7 +426,7 @@ void iput(MINODE *mip)
   Write YOUR code here to write INODE back to disk
  *****************************************************/
    int table_loc = 0;
-   for(int g = 0; g < NOFT; g++){ //use table to refer to device info
+   for(int g = 0; g < NMOUNT; g++){ //use table to refer to device info
       if(mountTable[g].dev == dev){
           table_loc = g;
           break;
@@ -511,21 +511,24 @@ int getino(char *pathname)
   MINODE *mip;
 
   //printf("getino: pathname=%s\n", pathname);
-  if (strcmp(pathname, "/")==0)
+  if (strcmp(pathname, "/")==0){
+      dev = root->dev; //go back to root device
       return 2; //root is 2nd inode
+  }
   
   // starting mip = root OR CWD
-  if (pathname[0]=='/')
+  if (pathname[0]=='/'){
+     dev = root->dev; //go back to root device
      mip = root;
+  }
   else
      mip = running->cwd;
 
   mip->refCount++;         // because we iput(mip) later
   
   tokenize(pathname); //divide pathname into dir components
-
   for (i=0; i<n; i++){
-      //printf("\tworking on: %s\n", name[i]);
+      printf("\tworking on: %s\n", name[i]);
 
       if(mip->ino == 2){ // if at root
          on_root = 1;
