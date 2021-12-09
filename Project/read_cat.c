@@ -131,7 +131,6 @@ int my_read(int fd, char* buf, int nbytes){
         if(chunk > nbytes) { // if chunk is more than nbytes desired to be read
             chunk = nbytes;
         }
-
         memcpy(buf, cp, chunk);
         buf += chunk; cp += chunk;
 

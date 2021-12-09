@@ -140,7 +140,7 @@ int my_open(char* filename, int flags){
 
     ino = getino(filename); // get inode number for the file
     if(!ino && (mode == W || mode == RW)){ // if file does not exist (and in mode read write)
-       
+       dev = odev;
        creat_pathname(filename); // creat file
        ino = getino(filename); // get inode number for the file
 

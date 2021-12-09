@@ -11,7 +11,7 @@ extern int add_indirect_entry(int dev, int idblk, int nblk);
 
 
 int my_write(int fd, char* buf, int nbytes){
-    
+    int odev = dev;
     int count = 0, offset;
     OFT* table;
 
@@ -51,9 +51,12 @@ int my_write(int fd, char* buf, int nbytes){
 
     fileSize = table->minodePtr->INODE.i_size;
 
+
+    dev = table->minodePtr->dev; //switch to the device that has the file to write
+
+
     // WRITE THE BYTES TO THE BUF
     while(nbytes){ //write to file until bytes limit reached
-
         lbk = offset / BLKSIZE; //what i_block would the data be at
         int saved_lbk = lbk;
         start = offset % BLKSIZE; // remainder is the byte offset at that block
@@ -81,6 +84,7 @@ int my_write(int fd, char* buf, int nbytes){
 
             if(d_block == -1){ //could not get data block from indirect block
                 printf("my_write unsuccessful\n");
+                dev = odev;
                 return -1;
             }else if(d_block == 0){ // ADD NEW DATA BLOCK TO INDIRECT BLOCK
                 // note: if get_indirect_block returns 0 -> it is an empty entry
@@ -88,11 +92,13 @@ int my_write(int fd, char* buf, int nbytes){
                 
                 if(!nblk){
                     printf("my_write unsuccessful\n");
+                    dev = odev;
                     return -1;
                 }
 
                 if(add_indirect_entry(dev, indirect_block, nblk) == -1){ // add nblk entry to data blocks
                     printf("my_write unsuccessful\n");
+                    dev = odev;
                     return -1;
                 }
                 printf("my_write : allocating a new datablock (indirectly) for file...\n");
@@ -127,6 +133,7 @@ int my_write(int fd, char* buf, int nbytes){
 
                 if(double_indirect_block == -1){ //make indirect block error
                     printf("my_write unsuccessful\n");
+                    dev = odev;
                     return -1;
                 }  
             }
@@ -138,6 +145,7 @@ int my_write(int fd, char* buf, int nbytes){
 
             if(d_block == -1){ //could not get data block from double indirect block
                 printf("my_write unsuccessful\n");
+                dev = odev;
                 return -1;
             }else if(d_block == -2){ // ADD NEW INDIRECT DATA BLOCK TO DOUBLE INDIRECT BLOCK
                 // note: if get_double_indirect_block returns -2 -> it is an empty double indirect entry
@@ -146,11 +154,13 @@ int my_write(int fd, char* buf, int nbytes){
                 
                 if(!nblk){
                     printf("my_write unsuccessful\n");
+                    dev = odev;
                     return -1;
                 }
 
                 if(add_indirect_entry(dev, double_indirect_block, nblk) == -1){ // add nblk entry to data blocks
                     printf("my_write unsuccessful\n");
+                    dev = odev;
                     return -1;
                 }
                 printf("my_write : allocating a new indirect datablock to double indirect block...\n");
@@ -167,11 +177,13 @@ int my_write(int fd, char* buf, int nbytes){
 
                 if(!nblk){
                     printf("my_write unsuccessful\n");
+                    dev = odev;
                     return -1;
                 }
 
                 if(add_indirect_entry(dev, indirect_block, nblk) == -1){ // add nblk entry to data blocks
                     printf("my_write unsuccessful\n");
+                    dev = odev;
                     return -1;
                 }
 
@@ -198,6 +210,7 @@ int my_write(int fd, char* buf, int nbytes){
         if(d_block == 0){
             printf("my_write : panic! d_block not set\n");
             printf("my_write unsuccessful\n");
+            dev = odev;
             return -1;
         }
 
@@ -210,7 +223,7 @@ int my_write(int fd, char* buf, int nbytes){
         }else{
             chunk = remain; // if the rest of data block can be written and still remaining nbytes -> chunk is remain
         }
-        printf("\t-> writing %d bytes to block %d, [%d for this file]\n", chunk, d_block, saved_lbk);
+        printf("\t-> writing %d bytes to block %d, [%d for this file] [on device: %d]\n", chunk, d_block, saved_lbk, dev);
         memcpy(cp, buf + buf_loc, chunk); //write a chunk of data to the data block
         
         nbytes -= chunk; 
@@ -231,10 +244,12 @@ int my_write(int fd, char* buf, int nbytes){
         table->minodePtr->dirty = 1; // dirty, will be modified on close
     }
 
+    dev = odev;
     return count;
 }
 
 int cp_pathname(char* pathname){
+    int odev = dev;
     int oino, pino;
     char second_pathname[128], new_basename[128], temp[128], dirname[128];
 
@@ -258,13 +273,16 @@ int cp_pathname(char* pathname){
         printf("cp_pathname : %s is a directory, must be a REG file type\ncp unsuccessful\n", pathname);
         return -1;
     }
+    omip->refCount++; // is_dir will derefrence minodes if fails, this usually works out, but want to continue to use it
 
+    dev = odev;
     if(getino(second_pathname) > 0){ //if second pathname has an inode, that means new file already exists
         printf("cp_pathname: %s already exists\ncp unsuccessful\n", second_pathname);
         return -1;
 
     }
 
+    dev = odev;
     if(getino(second_pathname) == -1){ //if second pathname is invalid
         printf("cp_pathname: %s is not a valid pathname\ncp unsuccessful\n", second_pathname);
         return -1;
@@ -296,6 +314,7 @@ int cp_pathname(char* pathname){
 
     printf("dirname: %s\nbasename: %s\n", dirname, new_basename);
     
+    dev = odev;
     if(strlen(dirname)){ //if a dirname was given
         pino = getino(dirname); //get the inode number for the parent directory
 
@@ -314,15 +333,18 @@ int cp_pathname(char* pathname){
 
     if(is_dir(pmip) != 0){ //if given dirname is not a directory
     
-        iput(pmip);
         printf("cp_pathname : %s is not a dir path\ncp unsuccessful\n", dirname);
         return -1;
         
     }
     // AT THIS POINT IN THE CODE: parent directory found, old file inode found, and new file name identified
     // all potential errors accounted for: safe to run my cp
-
-    return my_cp(pathname, new_basename);
+    dev = pmip->dev;
+    iput(pmip);
+    dev = omip->dev;
+    iput(omip);
+    dev = odev;
+    return my_cp(pathname, second_pathname);
 }
 
 int my_cp(char* src, char* dest){
@@ -333,9 +355,8 @@ int my_cp(char* src, char* dest){
     fd = my_open(src, R);   // open source file for mode read
     gd = my_open(dest, RW); // open destination file for read-write (will creat if not exist)
 
-
     while(n = my_read(fd, buf, BLKSIZE)){ // read src in block size chunks
-        printf("\n");
+
         if(n == -1){ //error with my_read
             printf("cp : catastrophic error reading src\n");
             printf("cp unsuccessful\n");
@@ -346,6 +367,7 @@ int my_cp(char* src, char* dest){
             return -1;
 
         }
+
         m = my_write(gd, buf, n); // write n bytes to dest
         if(m == -1 || m == 0){ //error with my_write
             printf("cp : catastrophic error writing to dest\n");
