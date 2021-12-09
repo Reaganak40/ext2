@@ -134,7 +134,7 @@ int unlink_pathname(char* pathname){
 * 
 *****************************************************/
 int link_pathname(char* pathname){
-
+    int odev = dev; //keep track of original dev
     int oino, pino;
     char second_pathname[128], new_basename[128], temp[128], dirname[128];
 
@@ -156,21 +156,24 @@ int link_pathname(char* pathname){
 
     if(is_dir(omip) == 0){ //if 0 -> is a directory
         printf("link_pathname : %s is a directory, must be a REG file type\nlink unsuccessful\n", pathname);
+        iput(omip);
         return -1;
     }
+    omip->refCount++; // is_dir will derefrence minodes if fails, this usually works out, but want to continue to use it
 
+    dev = odev;
     if(getino(second_pathname) > 0){ //if second pathname has an inode, that means new file already exists
         printf("link_pathname: %s already exists\nlink unsuccessful\n", second_pathname);
         return -1;
 
     }
 
+    dev = odev;
     if(getino(second_pathname) == -1){ //if second pathname is invalid
         printf("link_pathname: %s is not a valid pathname\nlink unsuccessful\n", second_pathname);
         return -1;
 
     }
-
 
     //tokenize second pathname
     tokenize(second_pathname);
@@ -196,6 +199,7 @@ int link_pathname(char* pathname){
 
     printf("dirname: %s\nbasename: %s\n", dirname, new_basename);
     
+    dev = odev;
     if(strlen(dirname)){ //if a dirname was given
         pino = getino(dirname); //get the inode number for the parent directory
 
@@ -208,23 +212,39 @@ int link_pathname(char* pathname){
         pmip = iget(dev, pino); //create new minode for parent directory
 
     }else{ //if in cwd
-        pmip = iget(dev, running->cwd->ino); //pmip becomes the cwd inode
+        pmip = iget(odev, running->cwd->ino); //pmip becomes the cwd inode
     }
-
-
     if(is_dir(pmip) != 0){ //if given dirname is not a directory
     
         iput(pmip);
+        iput(omip);
+        dev = odev;
         printf("link_pathname : %s is not a dir path\nlink unsuccessful\n", dirname);
         return -1;
         
     }
+
+    if((omip->dev != pmip->dev) || pmip->mounted){
+        printf("link: cannot link between unstable mounts\nlink unsuccessful\n");
+
+        dev = pmip->dev;
+        iput(pmip);
+        dev = omip->dev;
+        iput(omip);
+        dev = odev;
+        return -1;
+
+
+    }
+
     // AT THIS POINT IN THE CODE: parent directory found, old file inode found, and new file name identified
     // all potential errors accounted for: safe to run my link
     int success;
     success = my_link(pmip, oino, new_basename); //link file
 
     if(success == -1){ //my_link did not work
+        iput(omip); 
+        iput(pmip); 
         return success;
     }
 
