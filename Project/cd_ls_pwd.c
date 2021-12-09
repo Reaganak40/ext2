@@ -189,7 +189,7 @@ int ls(char* pathname)
 {
   int odev = dev; // originally device (keep track bc dev might change)
   //printf("ls: list CWD only! YOU FINISH IT for ls pathname\n");
-
+  printf("\n");
   if(strlen(pathname) == 0){ //no ls pathname
     ls_dir(running->cwd); //running process is what "calls" the ls command, get its cwd
     return 0;
@@ -266,7 +266,7 @@ char *pwd(MINODE *wd, char* record)
       printf("/");
 
     if(wd == running->cwd){ //this was the last dir in the chain
-      printf("\n");
+      printf("\n\n");
     }
 
     return 0;
@@ -315,7 +315,7 @@ char *pwd(MINODE *wd, char* record)
     printf("%s", name);
 
   if(wd == running->cwd){ //this was the last dir in the chain
-    printf("\n");
+    printf("\n\n");
 
     if(dev != running->cwd->dev){ //if pwd traversed through different systems
           dev = running->cwd->dev; // reset dev

@@ -68,7 +68,7 @@ int init()
   MINODE *mip;
   PROC   *p;
   OFT* t;
-  printf("init()\n");
+  //printf("init()\n");
 
   //initialize all minodes to 0 (no minodes)
   for (i=0; i<NMINODE; i++){
@@ -116,7 +116,7 @@ char *disk = 0; // Disk for mount_root
 *****************************************************/
 int mount_root()
 {  
-   printf("mount_root()\n");
+   //printf("mount_root()\n");
 
    int iblk, imap, bmap, nblocks, ninodes;
    char buf[BLKSIZE];
@@ -131,7 +131,7 @@ int mount_root()
       printf("magic = %x is not an ext2 filesystem\n", sp->s_magic);
       exit(1);
   }     
-  printf("EXT2 FS OK\n");
+  printf("EXT2 FS OK... \n");
   ninodes = sp->s_inodes_count; //how many inodes are on the disk
   nblocks = sp->s_blocks_count; //how many blocks are on the disk
 
@@ -142,7 +142,7 @@ int mount_root()
   bmap = gp->bg_block_bitmap; // bmap info received from group descriptor block
   imap = gp->bg_inode_bitmap; // imap info received from group descriptor block
   iblk = gp->bg_inode_table;  // iblk info received from group descriptor block
-  printf("bmp=%d imap=%d inode_start = %d\n", bmap, imap, iblk);
+  //printf("bmp=%d imap=%d inode_start = %d\n", bmap, imap, iblk);
 
    mountTable[0].dev = dev;
    mountTable[0].ninodes = ninodes;
@@ -167,19 +167,39 @@ int mount_root()
 *****************************************************/
 int main(int argc, char *argv[ ])
 {
+
+
+//     _______  ___________        ___________
+//    / ____/ |/ /_  __/__ \      / ____/ ___/
+//   / __/  |   / / /  __/ /_____/ /_   \__ \ 
+//  / /___ /   | / /  / __/_____/ __/  ___/ / 
+// /_____//_/|_|/_/  /____/    /_/    /____/  
+
+   printf("\033[0;31m"); //red
+   printf("     _______  ___________         ___________\n");
+   printf("    / ____/ |/ /_  __/__ \\       / ____/ ___/\n");
+   printf("   / __/  |   / / /  __/ / _____/ /_   \\__ \\ \n");
+   printf("  / /___ /   | / /  / __/ _____/ __/  ___/ / \n");
+   printf(" /_____//_/|_|/_/  /____/     /_/    /____/ \n\n\n");
+   printf("\033[0;37m"); //white
+
+
+
+                                           
+
   int ino;
 
   if(argc == 2){
      printf("detected diskimage argument: %s...\n", argv[1]);
      disk = argv[1];
   }else{
-     printf("no diskimage argument detected...\nselecting disk 2...\n");
+     printf("no diskimage argument detected...\nselecting default (disk 2)...\n");
       disk = (char*)malloc(10);
       strcpy(disk, "disk2");
 
   }
   //opens disk for read and write
-  printf("checking EXT2 FS ....");
+  printf("checking EXT2 FS ....\n");
   if ((fd = open(disk, O_RDWR)) < 0){
     printf("open %s failed\n", disk);
     exit(1);
@@ -189,21 +209,22 @@ int main(int argc, char *argv[ ])
 
   init();       // initilize all globals (procs and minodes)
   mount_root(); // Sets root pointer to an minode that contains the root dir inode
-  printf("root refCount = %d\n", root->refCount);
+  //printf("root refCount = %d\n", root->refCount);
 
-  printf("creating P0 as running process\n");
+  printf("creating P0 as running process...\n");
   init_proc(0);
   running->cwd = iget(dev, 2);  //ino 2 is root directory, so iget will make p0's cwd root directory
-  printf("root refCount = %d\n", root->refCount);
+  //printf("root refCount = %d\n", root->refCount);
 
   // WRTIE code here to create P1 as a USER process
-  printf(" **************** Input Commands ***************\n");
-  printf("     ls   cd   pwd   mkdir   rmdir   creat \n");
-  printf("  link    unlink    symlink   readlink   quit\n");
-  printf(" ***********************************************\n");
+
+  printf("project ready to go...\n\n");
   while(1){ //shell loop
-    printf("dev: %d\n", dev);
-    printf("input command : ");
+    //printf("dev: %d\n", dev);
+    printf("\033[0;31m"); //red
+    printf("input command > ");
+    printf("\033[0;37m"); //white
+
     fgets(line, 128, stdin);  //get command from user
     line[strlen(line)-1] = 0;
 
@@ -212,15 +233,17 @@ int main(int argc, char *argv[ ])
     pathname[0] = 0;
 
     sscanf(line, "%s %s", cmd, pathname);  //tokenize cmd and pathname from user input
-    printf("cmd=%s pathname=%s\n", cmd, pathname);
+    //printf("cmd=%s pathname=%s\n", cmd, pathname);
   
     //HANDLING COMMANDS
     if (strcmp(cmd, "ls")==0)
        ls(pathname);
     else if (strcmp(cmd, "cd")==0)
        cd(pathname);
-    else if (strcmp(cmd, "pwd")==0)
+    else if (strcmp(cmd, "pwd")==0){
+       printf("\n");
        pwd(running->cwd, 0);
+    }
     else if (strcmp(cmd, "mkdir")==0)
        mkdir_pathname(pathname);
     else if (strcmp(cmd, "rmdir")==0)
@@ -250,17 +273,26 @@ int main(int argc, char *argv[ ])
     else if (strcmp(cmd, "mount")==0){
        if(strlen(pathname) == 0){ // if 0 argument or 2 arguments run mount
          my_mount(pathname);  
-         continue;
-       }
+
+       }else{
        if(!add_second_pathname(line)) //0 if second pathname given
          my_mount(pathname);
+       }
     }
     else if (strcmp(cmd, "umount")==0)
        my_umount(pathname);
     else if (strcmp(cmd, "proc")==0)
        make_proc(pathname);
+    else if (strcmp(cmd, "help")==0){
+         printf(" **************** Input Commands ***************\n");
+         printf("     ls   cd   pwd   mkdir   rmdir   creat \n");
+         printf("  link    unlink    symlink   readlink   quit\n");
+         printf(" ***********************************************\n");
+    }
     else if (strcmp(cmd, "quit")==0)
        quit();
+   else
+     printf("Invalid command ... enter 'help' to see commands\n");
   }
 }
 

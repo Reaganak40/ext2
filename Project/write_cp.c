@@ -69,7 +69,7 @@ int my_write(int fd, char* buf, int nbytes){
             indirect_block = table->minodePtr->INODE.i_block[12];
 
             if(indirect_block == 0){ // if no indrect block, create it
-                printf("my_write : Need to add an indirect datablock...\n");
+                //printf("my_write : Need to add an indirect datablock...\n");
                 table->minodePtr->INODE.i_block[12] = indirect_block = make_indirect_block(dev); //assign indirect i_block
 
                 if(indirect_block == -1){ //make indirect block error
@@ -101,7 +101,7 @@ int my_write(int fd, char* buf, int nbytes){
                     dev = odev;
                     return -1;
                 }
-                printf("my_write : allocating a new datablock (indirectly) for file...\n");
+               // printf("my_write : allocating a new datablock (indirectly) for file...\n");
                 d_block = nblk;
 
             }
@@ -114,7 +114,7 @@ int my_write(int fd, char* buf, int nbytes){
             double_indirect_block = table->minodePtr->INODE.i_block[13];
 
             if(double_indirect_block == 0){ // if no double indrect block, create it
-                printf("my_write : Need to add a double indirect datablock...\n");
+                //printf("my_write : Need to add a double indirect datablock...\n");
 
                 // print next block ================
                 char temp[BLKSIZE];
@@ -125,7 +125,7 @@ int my_write(int fd, char* buf, int nbytes){
                     chunk = remain; // if the rest of data block can be written and still remaining nbytes -> chunk is remain
                 }
                 strncpy(temp, buf + buf_loc, chunk);
-                printf("\n\n%s\n\n", temp);
+               // printf("\n\n%s\n\n", temp);
                 // =================================
 
                 table->minodePtr->INODE.i_block[13] = double_indirect_block = make_indirect_block(dev); //assign indirect i_block
@@ -163,7 +163,7 @@ int my_write(int fd, char* buf, int nbytes){
                     dev = odev;
                     return -1;
                 }
-                printf("my_write : allocating a new indirect datablock to double indirect block...\n");
+              //  printf("my_write : allocating a new indirect datablock to double indirect block...\n");
                 
                 goto finding_block; // try again
 
@@ -187,7 +187,7 @@ int my_write(int fd, char* buf, int nbytes){
                     return -1;
                 }
 
-                printf("my_write : allocating a new datablock (double-indirectly) for file...\n");
+               // printf("my_write : allocating a new datablock (double-indirectly) for file...\n");
                 goto finding_block; // try again
 
             }
@@ -198,7 +198,7 @@ int my_write(int fd, char* buf, int nbytes){
             d_block = table->minodePtr->INODE.i_block[lbk];
 
             if(d_block == 0){ // if i_blocks don't stretch that far, allocate new data block
-                printf("my_write : allocating a new datablock for file...\n");
+                //printf("my_write : allocating a new datablock for file...\n");
                 nblk = balloc(dev); // get the newly allocated block number
                 table->minodePtr->INODE.i_block[lbk] = nblk; // add new data block to i_block list
                 d_block = nblk;
@@ -223,7 +223,7 @@ int my_write(int fd, char* buf, int nbytes){
         }else{
             chunk = remain; // if the rest of data block can be written and still remaining nbytes -> chunk is remain
         }
-        printf("\t-> writing %d bytes to block %d, [%d for this file] [on device: %d]\n", chunk, d_block, saved_lbk, dev);
+        //printf("\t-> writing %d bytes to block %d, [%d for this file] [on device: %d]\n", chunk, d_block, saved_lbk, dev);
         memcpy(cp, buf + buf_loc, chunk); //write a chunk of data to the data block
         
         nbytes -= chunk; 
@@ -258,7 +258,7 @@ int cp_pathname(char* pathname){
     sscanf(pathname, "%s %s", temp, second_pathname);  //seperate the two pathnames
     strcpy(pathname, temp);
 
-    printf("pathname1: %s\npathname2: %s\n", pathname, second_pathname);
+   // printf("pathname1: %s\npathname2: %s\n", pathname, second_pathname);
 
     oino = getino(pathname); //get inode number for old file
 
@@ -312,7 +312,7 @@ int cp_pathname(char* pathname){
 
     strcpy(new_basename, name[n - 1]); //get the _basename from path
 
-    printf("dirname: %s\nbasename: %s\n", dirname, new_basename);
+    //printf("dirname: %s\nbasename: %s\n", dirname, new_basename);
     
     dev = odev;
     if(strlen(dirname)){ //if a dirname was given

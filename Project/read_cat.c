@@ -183,7 +183,7 @@ int my_cat(char* pathname){
     dev = odev;
 
     fd = my_open(pathname, R);
-    printf("descriptor: %d , mode: %d, dev: %d, ino: %d\n", fd, running->fd[fd]->mode, running->fd[fd]->minodePtr->dev, running->fd[fd]->minodePtr->ino);
+    //printf("descriptor: %d , mode: %d, dev: %d, ino: %d\n", fd, running->fd[fd]->mode, running->fd[fd]->minodePtr->dev, running->fd[fd]->minodePtr->ino);
 
 
     if(fd == -1){
@@ -194,7 +194,8 @@ int my_cat(char* pathname){
     size = oget(running, fd)->minodePtr->INODE.i_size;
     bytes_read = 0;
 
-    printf("[cat] start:\n\n"); 
+    //printf("[cat] start:\n\n"); 
+    printf("\n");
     while(bytes_read < size){
 
         local_read = my_read(fd, buf, BLKSIZE); // read as many bytes as possible in a data block
@@ -208,6 +209,8 @@ int my_cat(char* pathname){
         buf[local_read] = '\0';
         printf("%s", buf); // print file content to the screen
     }
+    printf("\n");
+
 
     my_close(fd);
 

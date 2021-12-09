@@ -260,11 +260,11 @@ int rm_child(MINODE* pmip, char* fname){
 
           }else if(dp->rec_len == (buf + BLKSIZE) - cp){ // condition 2: dir entry is last in the data block
 
-            printf("before-last rec len: %d\nlast rec len: %d\n", ldp->rec_len, dp->rec_len);
+            //printf("before-last rec len: %d\nlast rec len: %d\n", ldp->rec_len, dp->rec_len);
             ldp->rec_len += dp->rec_len; //extend the last dir entry to the end of the block (this will stop the removed dir entry from being read)
             put_block(dev, inode.i_block[i], buf); //write back changes to the data block
 
-            printf("Condition 2 complete.\n");
+            //printf("Condition 2 complete.\n");
             return 0; //condition 2 complete
           
           }else{ //condition 3: dir entry is in the beginning or middle of the block
@@ -277,12 +277,12 @@ int rm_child(MINODE* pmip, char* fname){
               
 
             }
-            printf("Try memcpy\n");
+            //printf("Try memcpy\n");
             
             old_diff = ldp->rec_len; // keep track of how much space the old dir used to take in the block
 
             memcpy(ldp, lcp + ldp->rec_len, (buf + BLKSIZE) - (lcp + ldp->rec_len)); //move all block data left from the deleted dir's end
-            printf("Worked...\n");
+            //printf("Worked...\n");
 
             cp = lcp; //go back to starting location where old dir used to be
             dp = (DIR *)cp;

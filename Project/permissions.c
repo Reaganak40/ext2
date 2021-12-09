@@ -113,7 +113,7 @@ int has_permission(MINODE* mip, int _mode){
     ui++;
   }
 
-  printf("user: %s\n", user_permissions);
+  //printf("user: %s\n", user_permissions);
 
   if(f_inode.i_uid == running->uid){ //is owner -> check owner permissions
 

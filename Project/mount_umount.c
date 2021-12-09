@@ -41,7 +41,7 @@ int my_mount(char* pathname){
     sscanf(pathname, "%s %s", temp, second_pathname);  //seperate the two pathnames
     strcpy(pathname, temp);
 
-    printf("pathname1: %s\npathname2: %s\n", pathname, second_pathname);
+   // printf("pathname1: %s\npathname2: %s\n", pathname, second_pathname);
 
     if(getino(second_pathname) == -1){ //if second pathname is invalid
         printf("mount : %s is not a valid pathname\nmount unsuccessful\n", second_pathname);
@@ -70,7 +70,7 @@ int my_mount(char* pathname){
 
     strcpy(new_basename, name[n - 1]); //get the _basename from path
 
-    printf("dirname: %s\nbasename: %s\n", dirname, new_basename);
+  //  printf("dirname: %s\nbasename: %s\n", dirname, new_basename);
     
     if(strlen(dirname)){ //if a dirname was given
         pino = getino(dirname); //get the inode number for the parent directory
@@ -107,7 +107,7 @@ int my_mount(char* pathname){
     char *cp;
     
 
-    printf("preparing mount...\n");
+    //printf("preparing mount...\n");
     if((ino = getino(second_pathname)) > 0){ //if second pathname has an inode, that means new file already exists
         mip = iget(dev, ino);
 
@@ -142,7 +142,7 @@ int my_mount(char* pathname){
 
         return -1;
     }
-    printf("dev: %d\n", fd);
+  //  printf("dev: %d\n", fd);
     
     // safe to start mounting
     mip->mounted = 1;   // mount flag is TRUE
@@ -218,7 +218,7 @@ int my_umount(char* pathname){
     
 
     strcpy(_basename, name[n - 1]); //get the _basename from path
-    printf("dirname: %s\nbasename: %s\n", dirname, _basename);
+    //printf("dirname: %s\nbasename: %s\n", dirname, _basename);
 
     if(strlen(dirname)){ //if a dirname was given
         pino = getino(dirname); //get the inode number for the parent directory

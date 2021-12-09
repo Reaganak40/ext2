@@ -68,7 +68,7 @@ int unlink_pathname(char* pathname){
 
     strcpy(_basename, name[n - 1]); //get the _basename from path
 
-    printf("dirname: %s\nbasename: %s\n", dirname, _basename);
+   // printf("dirname: %s\nbasename: %s\n", dirname, _basename);
 
     if(strlen(dirname)){ //if a dirname was given
         dev = odev; //reset back to original device
@@ -149,7 +149,7 @@ int link_pathname(char* pathname){
     sscanf(pathname, "%s %s", temp, second_pathname);  //seperate the two pathnames
     strcpy(pathname, temp);
 
-    printf("pathname1: %s\npathname2: %s\n", pathname, second_pathname);
+    //printf("pathname1: %s\npathname2: %s\n", pathname, second_pathname);
 
     oino = getino(pathname); //get inode number for old file
 
@@ -203,7 +203,7 @@ int link_pathname(char* pathname){
 
     strcpy(new_basename, name[n - 1]); //get the _basename from path
 
-    printf("dirname: %s\nbasename: %s\n", dirname, new_basename);
+    //printf("dirname: %s\nbasename: %s\n", dirname, new_basename);
     
     dev = odev;
     if(strlen(dirname)){ //if a dirname was given

@@ -98,7 +98,7 @@ int ialloc(int dev)  // allocate an inode number from inode_bitmap
     if (tst_bit(buf, i)==0){ //returns the bit value (if there is no bit there)
         set_bit(buf, i);
         put_block(dev, mountTable[table_loc].imap, buf);
-        printf("allocated ino = %d\n", i+1); // bits count from 0; ino from 1
+        //printf("allocated ino = %d\n", i+1); // bits count from 0; ino from 1
         return i+1;
     }
   }
@@ -132,7 +132,7 @@ int balloc(int dev){ //same as ialloc but for the block bitmap
         if (tst_bit(buf, i)==0){ //returns the bit value (if there is no bit there)
             set_bit(buf, i);
             put_block(dev, mountTable[table_loc].bmap, buf);
-            printf("allocated block = %d\n", i+1); // bits count from 0; ino from 1
+            //printf("allocated block = %d\n", i+1); // bits count from 0; ino from 1
             return i+1;
         }
     }
@@ -283,7 +283,7 @@ int creat_pathname(char* pathname){
 
     strcpy(_basename, name[n - 1]); //get the _basename from path
 
-    printf("dirname: %s\nbasename: %s\n", dirname, _basename);
+   // printf("dirname: %s\nbasename: %s\n", dirname, _basename);
 
     dev = odev; // reset to correctly get pino
     if(strlen(dirname)){ //if a dirname was given
@@ -410,7 +410,7 @@ int mkdir_pathname(char* pathname){
 
     strcpy(_basename, name[n - 1]); //get the _basename from path
 
-    printf("dirname: %s\nbasename: %s\n", dirname, _basename);
+    //printf("dirname: %s\nbasename: %s\n", dirname, _basename);
 
     if(strlen(dirname)){ //if a dirname was given
         pino = getino(dirname); //get the inode number for the parent directory
@@ -459,7 +459,7 @@ int mkdir_pathname(char* pathname){
 
     //all checks made, safe to mkdir
     
-    printf("mkdir dirname and basename safe, preparing mkdir ...\n");
+    //printf("mkdir dirname and basename safe, preparing mkdir ...\n");
 
     int success = my_mkdir(pmip, _basename); 
 
@@ -478,7 +478,7 @@ int mkdir_pathname(char* pathname){
 *
 *****************************************************/
 int my_mkdir(MINODE* pmip, char* _basename){
-    printf("mip ino: %d, dev = %d\n", pmip->ino, pmip->dev);
+    //printf("mip ino: %d, dev = %d\n", pmip->ino, pmip->dev);
     int ino, blk;
     MINODE* mip;
     INODE inode;

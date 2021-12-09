@@ -84,7 +84,7 @@ int tokenize(char *pathname)
 {
   int i;
   char *s;
-  printf("tokenize %s\n", pathname);
+  //printf("tokenize %s\n", pathname);
 
   strcpy(gpath, pathname);   // tokens are in global gpath[ ]
   n = 0;
@@ -97,9 +97,9 @@ int tokenize(char *pathname)
   }
   name[n] = 0;
   
-  for (i= 0; i<n; i++)
-    printf("%s  ", name[i]);
-  printf("\n");
+  //for (i= 0; i<n; i++)
+    //printf("%s  ", name[i]);
+  //printf("\n");
 }
 
 
@@ -244,7 +244,7 @@ OFT* oset(int dev, MINODE* mip, int mode, int* fd_loc){
 
       if(table->minodePtr == mip){ // if minode belongs to this tables minodePtr
          if(table->mode == mode){
-            printf("oset : used pre-existing table\n");
+            //printf("oset : used pre-existing table\n");
             table->refCount++;
             *fd_loc = i;
             return table;
@@ -267,8 +267,8 @@ OFT* oset(int dev, MINODE* mip, int mode, int* fd_loc){
             if(running->fd[f] == 0){ //if there is a free spot in proc's file descriptors list
                running->fd[f] = table;
                *fd_loc = f;
-               assigned = 1;
-               printf("oset : fd assigned to empty spot in fd list of proc\n");
+               //assigned = 1;
+               //printf("oset : fd assigned to empty spot in fd list of proc\n");
                break;
    
             }
@@ -280,7 +280,7 @@ OFT* oset(int dev, MINODE* mip, int mode, int* fd_loc){
                printf("OH NO: FD limit reached for this PROC!\n");
                *fd_loc = -1;
             }else{ //expand list and add fd
-               printf("oset : expanded fd limit for this proc\n");
+               //printf("oset : expanded fd limit for this proc\n");
                running->fd[nfd - 1] = table;
                *fd_loc = nfd - 1;
             }
@@ -514,7 +514,7 @@ int getino(char *pathname)
   
   tokenize(pathname); //divide pathname into dir components
   for (i=0; i<n; i++){
-      printf("\tworking on: %s\n", name[i]);
+      //printf("\tworking on: %s\n", name[i]);
 
       if(has_permission(mip, R) == -1){
          iput(mip);
@@ -544,7 +544,7 @@ int getino(char *pathname)
 
       if (ino==0){
          iput(mip);
-         printf("name %s does not exist\n", name[i]);
+         //printf("name %s does not exist\n", name[i]);
          return 0;
       }
 
