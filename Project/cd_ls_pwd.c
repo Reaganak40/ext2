@@ -158,8 +158,12 @@ int ls_dir(MINODE *mip)
 
      cp += dp->rec_len; //rec_len is entry length in bytes. So, cp will now point to the byte after the end of the file.
      dp = (DIR *)cp;    //dp will now start at cp (the next entry)
+     iput(fmip); // reset minode 
   }
   printf("\n");
+
+ 
+  return 0;
 
 }
 
@@ -194,10 +198,14 @@ int ls(char* pathname)
 
   if(is_dir(mip) != 0){ //pathname is not a directory
     printf("cant ls a non-directory\n");
+    iput(mip);
+    dev = odev; //reset dev to pre-ls
     return -1;
   }
 
   ls_dir(mip); //run ls_dir on the pathname
+  //printf("mip: %d, dev %d, ref count: %d\n", mip->ino, mip->dev, mip->refCount);
+  iput(mip);
   dev = odev; //reset dev to pre-ls
   
   return 0;
@@ -285,6 +293,7 @@ char *pwd(MINODE *wd, char* record)
     }
   }
 
+  iput(pip);
   return (char*)1;
 
 

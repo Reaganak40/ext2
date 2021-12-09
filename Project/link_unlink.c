@@ -37,14 +37,16 @@ int unlink_pathname(char* pathname){
     }
 
     mip = iget(dev, ino); //get inode of pathname
-
+    //printf("NEW mip: %d, dev %d, ref count: %d\n", mip->ino, mip->dev, mip->refCount);
+    
     if(is_dir(mip) == 0){ //if mip is directory, dont unlink
         printf("unlink pathname: %s is a directory.\nunlink unsuccessful\n", pathname);
+        iput(mip);
         dev = odev; //reset back to original device
 
         return -1;
     }
-
+    mip->refCount++; // is_dir will derefrence minodes if fails, this usually works out, but want to continue to use it
     tokenize(pathname);
     
     //determine to start at root or cwd
@@ -83,13 +85,18 @@ int unlink_pathname(char* pathname){
     }else{ //if in cwd
         pmip = iget(dev, running->cwd->ino); //pmip becomes the cwd inode
     }
+    //printf("NEW pmip: %d, dev %d, ref count: %d\n", pmip->ino, pmip->dev, pmip->refCount);
+
 
     if(rm_child(pmip, _basename) != 0){
         return -1;
     }
 
     pmip->dirty = 1;
-    iput(pmip);
+
+    if((pmip->ino != mip->ino) || (pmip->dev != mip->dev)){ //only put if they are different
+        iput(pmip);
+    }
 
     //decrement inode's link count by 1
     mip->INODE.i_links_count--;

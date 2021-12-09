@@ -304,6 +304,7 @@ int creat_pathname(char* pathname){
 
     if(strlen(dirname) && is_dir(pmip) != 0){ //pmip is not a directory (only check if not cwd)
         printf("dirname is not a directory\ncreat unsuccessful\n");
+        iput(pmip);
         dev = odev; //reset back to original dev
 
         return -1;
@@ -313,6 +314,7 @@ int creat_pathname(char* pathname){
 
     int success = my_creat(pmip, _basename);
 
+    iput(pmip);
     dev = odev; //reset back to original dev
 
     return success;

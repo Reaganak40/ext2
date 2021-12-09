@@ -136,6 +136,7 @@ int rmdir_pathname(char* pathname){
     if(is_dir(mip) != 0){ //if mip is not a directory
         printf("rmdir pathname : %s is not a directory\n", name[n-1]);
         printf("rmdir unsuccessful\n");
+        iput(mip);
         dev = odev; //reset back to orignal dev
 
         return -1;
@@ -165,6 +166,7 @@ int rmdir_pathname(char* pathname){
     findmyname(pmip, ino, fname); // get name of dir to remove
     if(rm_child(pmip, fname) != 0){ // remove child from parent directory, 0 means successful
       printf("rmdir unsuccessful\n");
+      iput(pmip); //write pmip inode back to disk
       dev = odev; //reset back to orignal dev
       return -1;
     }         
@@ -176,6 +178,8 @@ int rmdir_pathname(char* pathname){
 
     bdalloc(dev, mip->INODE.i_block[0]); // deallocate the data block used by removed directory
     idalloc(dev, ino);                   // deallocate the inode used by removed directory
+
+    iput(mip);
 
     dev = odev; //reset back to orignal dev
     return 0;

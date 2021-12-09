@@ -246,10 +246,12 @@ int my_umount(char* pathname){
     }
     strcat(mount_name, _basename);
 
+    iput(pmip);
+
     for(int i = 0; i < NMOUNT; i++){
 
         if((mountTable[i].dev != 0) && (strcmp(mountTable[i].name, pathname) == 0) || (strcmp(mountTable[i].mount_name, mount_name) == 0) ){ //dev names match
-            mip = mountTable[i].mounted_inode;
+            mip = mountTable[i].mounted_inode; //mip is the mount minode
             dev = mountTable[i].dev;
             table_loc = i;
             break;
@@ -264,13 +266,13 @@ int my_umount(char* pathname){
 
     int valid_message = 0;
     for(int i = 0; i < NMINODE; i++){
-        if (minode[i].dev == dev){ //check to see if any file is active in mounted filesys
+        if (minode[i].dev == dev && (minode[i].refCount)){ //check to see if any file is active in mounted filesys
             if(!valid_message){
                 printf("Could not umount. Files are still busy.\n");
                 valid_message = 1;
             }
 
-            printf("\tminode #%4d: ino: %4d (dev %d)\n", i, minode[i].ino, minode[i].dev);
+            printf("\tminode #%4d: ino: %4d ref count: %4d (dev %d)\n", i, minode[i].ino, minode[i].refCount, minode[i].dev);
 
         }
     }

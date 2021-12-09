@@ -357,6 +357,8 @@ MINODE *iget(int dev, int ino)
     if (mip->refCount && mip->dev == dev && mip->ino == ino){ //if target minode is currently being used, its on this device, and it matches ino (inode number)
        mip->refCount++; //increment refCount by 1
        //printf("found [%d %d] as minode[%d] in core\n", dev, ino, i);
+      //printf("NEW mip: %d, dev %d, ref count: %d\n", mip->ino, mip->dev, mip->refCount);
+
        return mip; //return that minode
     }
   }
@@ -388,6 +390,8 @@ MINODE *iget(int dev, int ino)
        ip = (INODE *)buf + offset;  // offset gets the exact location of inode
        // copy INODE to mp->INODE
        mip->INODE = *ip; //set new minode's inode pointer to the requested inode
+       //printf("NEW mip: %d, dev %d, ref count: %d\n", mip->ino, mip->dev, mip->refCount);
+
        return mip; //return new minode
     }
   }   
@@ -412,7 +416,11 @@ void iput(MINODE *mip)
  if (mip==0) 
      return;
 
+  // printf("iput mip: %d, dev %d, ref count: %d (to go down 1)\n", mip->ino, mip->dev, mip->refCount);
+
  mip->refCount--;
+
+ 
  
  if (mip->refCount > 0) return;
  if (!mip->dirty)       return;
@@ -577,6 +585,7 @@ int getino(char *pathname)
          for(int i = 0; i < NMOUNT; i++){ // switch to mount device
 
             if(mountTable[i].dev == dev){ // go to mount table
+               iput(mip); // deallocate
                mip = mountTable[i].mounted_inode;
 
                dev = mip->dev; // change dev to the the one that is mounting this root
