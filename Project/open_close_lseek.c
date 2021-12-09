@@ -124,7 +124,7 @@ int has_permission(MINODE* mip, int _mode){
 *
 *****************************************************/
 int my_open(char* filename, int flags){
-
+    int odev = dev;
     int ino, mode;
     MINODE* mip;
     OFT* table;
@@ -168,6 +168,7 @@ int my_open(char* filename, int flags){
       return -1;
     }
 
+    dev = odev;
     return fd_loc;
 
 

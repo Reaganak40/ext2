@@ -12,7 +12,7 @@ extern int get_double_indirect_block(int dev, int didblk, int blk_number);
 *
 *****************************************************/
 int my_read(int fd, char* buf, int nbytes){
-
+    int odev = dev;
     OFT* table;
 
     int count = 0; // number of bytes read
@@ -54,6 +54,8 @@ int my_read(int fd, char* buf, int nbytes){
         return -1;
     }
 
+    dev = table->minodePtr->dev; //switch to the device that has the file to read
+
     while(nbytes && avil){ // while there are more bytes requested to be read, and there are bytes avialable 
         lbk = offset / BLKSIZE; //what i_block would the data be at
         start = offset % BLKSIZE; // remainder is the byte offset at that block
@@ -74,6 +76,7 @@ int my_read(int fd, char* buf, int nbytes){
 
             if(dblock == -1 || dblock == 0){
                 printf("my_read unsuccessful\n");
+                dev = odev;
                 return -1;
             }
 
@@ -85,6 +88,7 @@ int my_read(int fd, char* buf, int nbytes){
             if(double_indirect_block == 0){ // if no double indrect block
                 printf("my_read : could not find dobule indrect disk block\n");
                 printf("my_read unsuccessful\n");
+                dev = odev;
                 return -1;
             }
 
@@ -94,6 +98,7 @@ int my_read(int fd, char* buf, int nbytes){
 
             if(dblock == -1 || dblock == 0){
                 printf("my_read unsuccessful\n");
+                dev = odev;
                 return -1;
             }
             
@@ -105,6 +110,7 @@ int my_read(int fd, char* buf, int nbytes){
         if(dblock == 0){ // if i_blocks don't stretch that far
             printf("my_read : the requested i_block is unassigned\n");
             printf("my_read unsuccessful\n");
+            dev = odev;
             return -1;
         }
 
@@ -139,6 +145,7 @@ int my_read(int fd, char* buf, int nbytes){
     } // while loop ends when all byte read limit reached or end of file
 
     table->offset = offset; // apply new offset to fd
+    dev = odev;
     return count;
 }
 
@@ -150,17 +157,31 @@ int my_read(int fd, char* buf, int nbytes){
 *
 *****************************************************/
 int my_cat(char* pathname){
-
+    int odev = dev;
     int fd;
     int size;
     char buf[BLKSIZE + 1];
-    int bytes_read, local_read;
+    int ino, bytes_read, local_read;
 
-    if(!getino(pathname)){ //if file does not exist
+    if(!(ino = getino(pathname))){ //if file does not exist
         printf("my_cat : %s does not exist\n", pathname);
         printf("my_cat unsuccessful\n");
+        dev = odev;
         return -1;
     }
+    
+    // check not trying to cat a directory
+    MINODE* mip;
+    mip = iget(dev, ino);
+    if(is_dir(mip) == 0){
+        printf("cat : %s is a directory, must be a REG file type\ncat unsuccessful\n", pathname);
+        iput(mip);
+        dev = odev;
+        return -1;
+    }
+    mip->refCount++;
+    iput(mip);
+    dev = odev;
 
     fd = my_open(pathname, R);
     printf("descriptor: %d , mode: %d, dev: %d, ino: %d\n", fd, running->fd[fd]->mode, running->fd[fd]->minodePtr->dev, running->fd[fd]->minodePtr->ino);

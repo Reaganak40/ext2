@@ -20,6 +20,7 @@ extern int balloc(int dev); //same as ialloc but for the block bitmap
 *
 *****************************************************/
 int symlink_pathname(char* pathname){
+    int odev = dev;
 
     int oino, pino;
     char second_pathname[128], new_basename[128], temp[128], dirname[128], old_basename[60];
@@ -35,6 +36,7 @@ int symlink_pathname(char* pathname){
 
     if(!oino){ //check old file exsits
         printf("symlink_pathname : %s is not a valid path\nsymlink unsuccessful\n", pathname);
+        dev = odev;
         return -1;
     }
     
@@ -43,7 +45,7 @@ int symlink_pathname(char* pathname){
     tokenize(pathname);
     strcpy(old_basename, name[n - 1]); //get the old file nme for later
 
-
+    dev = odev;
     if(getino(second_pathname)){ //if second pathname has an inode, that means new file already exists
         printf("symlink_pathname: %s already exists\nsymlink unsuccessful\n", second_pathname);
         return -1;
@@ -73,6 +75,7 @@ int symlink_pathname(char* pathname){
 
     printf("dirname: %s\nbasename: %s\n", dirname, new_basename);
 
+    dev = odev;
     if(strlen(dirname)){ //if a dirname was given
         pino = getino(dirname); //get the inode number for the parent directory
 
@@ -90,7 +93,12 @@ int symlink_pathname(char* pathname){
     
     // AT THIS POINT IN THE CODE: parent directory found, old file inode found, and new file name identified
     // all potential errors accounted for: safe to run my symlink
-    return my_symlink(pmip, old_basename, new_basename); //link file
+    int success = my_symlink(pmip, old_basename, new_basename); //link file. also, pmip gets deallocatd here
+
+    dev = omip->dev;
+    iput(omip);
+    dev = odev;
+    return success;
 
 }
 
@@ -103,23 +111,31 @@ int symlink_pathname(char* pathname){
 *
 *****************************************************/
 int my_symlink(MINODE* pmip, char* old_name, char* _basename){
+    
     if(my_creat(pmip, _basename)){ //creat file with basename (i_mode will be changed later)
         return -1;
     }
 
-    MINODE* mip;
+
+
+
+    MINODE* mip, *temp_wd;
     int ino, blk;
     char buf[BLKSIZE], name[60];
 
+    temp_wd = running->cwd;
+    running->cwd = pmip;
     ino = getino(_basename); //get the inode number for the new created file
-    mip = iget(dev, ino); // set mip to new created file (get its inode)
+    running->cwd = temp_wd;
 
+    mip = iget(dev, ino); // set mip to new created file (get its inode)
     mip->INODE.i_mode = 0xA1FF; //lnk mode
 
     blk = balloc(dev); // get the newly allocated block number
 
     if(!blk){ //if new data block could not be assigned
         printf("my_symlink : WARNING, blk could not be allocated\n");
+        iput(pmip); //write parent inode back to disk
         return -1;
     }
 
@@ -135,6 +151,7 @@ int my_symlink(MINODE* pmip, char* old_name, char* _basename){
     iput(mip); //write inode back to disk
 
     pmip->dirty = 1; // pmip is dirty
+
     iput(pmip); //write parent inode back to disk
 
     return 0;
