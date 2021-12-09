@@ -28,6 +28,7 @@ extern int nfd;
 extern int fd, dev; //dev is device (disk) file descriptor
 extern int balloc(int dev); //same as ialloc but for the block bitmap
 extern int is_dir(MINODE* mip);
+extern int has_permission(MINODE* mip, int _mode);
 
 
 
@@ -101,29 +102,6 @@ int tokenize(char *pathname)
   printf("\n");
 }
 
-/*****************************************************
-*
-*  Name:    init_proc
-*  Made by: Reagan
-*  Details: Initialized a new proc at pid if it is free. 
-*           If it is free assigns the running ptr and 
-*           returns 0. Otherwise returns 1 and doesn't 
-*           assign anything.
-*
-*****************************************************/
-int init_proc(int pid){
-   PROC* p;
-   
-   p = &proc[pid]; // get process at process id
-   if(p->status == FREE){
-      p->status = READY;
-      running = p;
-      nfd = 0; 
-      return 0;
-   }
-
-   return 1;
-}
 
 int add_indirect_entry(int dev, int idblk, int nblk){
    char buf[BLKSIZE];
@@ -537,6 +515,15 @@ int getino(char *pathname)
   tokenize(pathname); //divide pathname into dir components
   for (i=0; i<n; i++){
       printf("\tworking on: %s\n", name[i]);
+
+      if(has_permission(mip, R) == -1){
+         iput(mip);
+         return -1;
+      }
+      if(has_permission(mip, X) == -1){
+         iput(mip);
+         return -1;
+      }
 
       if(mip->ino == 2){ // if at root
          on_root = 1;

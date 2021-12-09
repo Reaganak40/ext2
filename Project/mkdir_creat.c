@@ -309,6 +309,22 @@ int creat_pathname(char* pathname){
 
         return -1;
     }
+
+    if(has_permission(pmip, R) == -1){
+      iput(pmip);
+      dev = odev; //reset back to orignal dev
+      return -1;
+    }
+    if(has_permission(pmip, W) == -1){
+      iput(pmip);
+      dev = odev; //reset back to orignal dev
+      return -1;
+    }
+    if(has_permission(pmip, X) == -1){
+      iput(pmip);
+      dev = odev; //reset back to orignal dev
+      return -1;
+    }
     
     //all checks made, safe to creat
 
@@ -418,10 +434,26 @@ int mkdir_pathname(char* pathname){
         return -1;
     }
 
-
+    if(has_permission(pmip, R) == -1){
+      iput(pmip);
+      dev = odev; //reset back to orignal dev
+      return -1;
+    }
+    if(has_permission(pmip, W) == -1){
+      iput(pmip);
+      dev = odev; //reset back to orignal dev
+      return -1;
+    }
+    if(has_permission(pmip, X) == -1){
+      iput(pmip);
+      dev = odev; //reset back to orignal dev
+      return -1;
+    }
 
     if(search(pmip, _basename)){ //if not 0 -> basename exists and can't mkdir
         printf("basename already exists\nmkdir unsuccessful\n");
+        iput(pmip);
+        dev = odev; //reset back to original dev
         return -1;
     }
 

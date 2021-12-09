@@ -6,6 +6,7 @@ extern int findino(MINODE *mip, u32 *myino);
 extern int getino(char *pathname);
 extern int findmyname(MINODE *parent, u32 myino, char myname[ ]);
 extern int is_dir(MINODE* mip);
+extern int has_permission(MINODE* mip, int _mode);
 //***********************************************
 
 /*****************************************************
@@ -27,6 +28,16 @@ int cd(char *pathname)
 
 
   MINODE* mip = iget(dev, ino); //create a new minode with the inode for that pathname
+
+  if(has_permission(mip, R) == -1){
+    iput(mip);
+    return -1;
+  }
+  if(has_permission(mip, X) == -1){
+    iput(mip);
+    return -1;
+  }
+
 
   if(is_dir(mip) != 0){
     printf("can't cd to a non-directory\n");
@@ -203,6 +214,17 @@ int ls(char* pathname)
     return -1;
   }
 
+  if(has_permission(mip, R) == -1){
+    iput(mip);
+    dev = odev; //reset dev to pre-ls
+    return -1;
+  }
+  if(has_permission(mip, X) == -1){
+    iput(mip);
+    dev = odev; //reset dev to pre-ls
+    return -1;
+  }
+
   ls_dir(mip); //run ls_dir on the pathname
   //printf("mip: %d, dev %d, ref count: %d\n", mip->ino, mip->dev, mip->refCount);
   iput(mip);
@@ -223,6 +245,12 @@ int ls(char* pathname)
 *****************************************************/
 char *pwd(MINODE *wd, char* record)
 {
+  if(has_permission(wd, R) == -1){
+    return (char*)0;
+  }
+  if(has_permission(wd, X) == -1){
+    return (char*)0;
+  }
 
   u32 my_ino, parent_ino;
   MINODE* pip;
@@ -264,6 +292,7 @@ char *pwd(MINODE *wd, char* record)
 
 
   pwd_return_value = pwd(pip, record); // start working way back up to root
+  
 
   if(pip->dev != wd->dev){ // if at a mount crossing point
     strcpy(name, "");

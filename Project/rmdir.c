@@ -127,10 +127,8 @@ int rmdir_pathname(char* pathname){
 
     if(!ino){ //if pathname does not lead anywhere
       printf("rmdir unsuccessful\n");
-      dev = odev; //reset back to orignal dev
       return -1;
     }
-
     mip = iget(dev, ino);   // put inode in a new minode
 
     if(is_dir(mip) != 0){ //if mip is not a directory
@@ -141,6 +139,13 @@ int rmdir_pathname(char* pathname){
 
         return -1;
     } 
+
+    if(has_permission(mip, OWNER_ONLY) == -1){
+      iput(mip);
+      dev = odev; //reset back to orignal dev
+      return -1;
+    }
+
 
     get_block(dev, mip->INODE.i_block[0], buf); //goes to the data block that holds the first few entries
     dp = (DIR *)buf;  //buf can be read as ext2_dir_entry_2 entries

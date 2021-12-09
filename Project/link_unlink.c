@@ -87,6 +87,12 @@ int unlink_pathname(char* pathname){
     }
     //printf("NEW pmip: %d, dev %d, ref count: %d\n", pmip->ino, pmip->dev, pmip->refCount);
 
+    if(has_permission(pmip, OWNER_ONLY) == -1){
+        iput(pmip);
+        dev = odev; //reset dev to pre-ls
+        return -1;
+    }
+
 
     if(rm_child(pmip, _basename) != 0){
         return -1;
@@ -237,6 +243,57 @@ int link_pathname(char* pathname){
 
     }
 
+    // RWX for old file
+    if(has_permission(omip, R) == -1){
+        dev = pmip->dev;
+        iput(pmip);
+        dev = omip->dev;
+        iput(omip);
+        dev = odev;
+        return -1;
+    }
+    if(has_permission(omip, W) == -1){
+        dev = pmip->dev;
+        iput(pmip);
+        dev = omip->dev;
+        iput(omip);
+        dev = odev;
+        return -1;
+    }
+    if(has_permission(omip, X) == -1){
+        dev = pmip->dev;
+        iput(pmip);
+        dev = omip->dev;
+        iput(omip);
+        dev = odev;
+        return -1;
+    }
+
+    //RWX for parent
+    if(has_permission(pmip, R) == -1){
+        dev = pmip->dev;
+        iput(pmip);
+        dev = omip->dev;
+        iput(omip);
+        dev = odev;
+        return -1;
+    }
+    if(has_permission(pmip, W) == -1){
+        dev = pmip->dev;
+        iput(pmip);
+        dev = omip->dev;
+        iput(omip);
+        dev = odev;
+        return -1;
+    }
+    if(has_permission(pmip, X) == -1){
+        dev = pmip->dev;
+        iput(pmip);
+        dev = omip->dev;
+        iput(omip);
+        dev = odev;
+        return -1;
+    }
     // AT THIS POINT IN THE CODE: parent directory found, old file inode found, and new file name identified
     // all potential errors accounted for: safe to run my link
     int success;

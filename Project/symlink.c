@@ -111,8 +111,14 @@ int symlink_pathname(char* pathname){
 *
 *****************************************************/
 int my_symlink(MINODE* pmip, char* old_name, char* _basename){
+    printf("hello\n");
+    // the name of the file will be _basename -> old_name
+    char sym_name[60];
+    strcpy(sym_name, _basename);
+    strcat(sym_name, " -> ");
+    strcat(sym_name, old_name);
     
-    if(my_creat(pmip, _basename)){ //creat file with basename (i_mode will be changed later)
+    if(my_creat(pmip, sym_name)){ //creat file with sym_name (i_mode will be changed later)
         return -1;
     }
 
@@ -125,7 +131,7 @@ int my_symlink(MINODE* pmip, char* old_name, char* _basename){
 
     temp_wd = running->cwd;
     running->cwd = pmip;
-    ino = getino(_basename); //get the inode number for the new created file
+    ino = getino(sym_name); //get the inode number for the new created file
     running->cwd = temp_wd;
 
     mip = iget(dev, ino); // set mip to new created file (get its inode)

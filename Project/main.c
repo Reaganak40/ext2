@@ -19,7 +19,7 @@ int add_second_pathname(char line[]);
 extern MINODE *iget();
 extern int get_block(int dev, int blk, char *buf);
 extern void iput(MINODE *mip);
-int init_proc(int pid, PROC** _running);
+extern int init_proc(int pid);
 // *********************************************
 int quit(); //local function defintion
 
@@ -53,6 +53,7 @@ char line[128], cmd[32], pathname[128];
 
 // level-3 source files
 #include "mount_umount.c"
+#include "permissions.c"
 
 /*****************************************************
 *
@@ -191,7 +192,7 @@ int main(int argc, char *argv[ ])
   printf("root refCount = %d\n", root->refCount);
 
   printf("creating P0 as running process\n");
-  init_proc(0, &running);
+  init_proc(0);
   running->cwd = iget(dev, 2);  //ino 2 is root directory, so iget will make p0's cwd root directory
   printf("root refCount = %d\n", root->refCount);
 
@@ -256,6 +257,8 @@ int main(int argc, char *argv[ ])
     }
     else if (strcmp(cmd, "umount")==0)
        my_umount(pathname);
+    else if (strcmp(cmd, "proc")==0)
+       make_proc(pathname);
     else if (strcmp(cmd, "quit")==0)
        quit();
   }

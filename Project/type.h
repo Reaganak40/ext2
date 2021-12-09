@@ -23,6 +23,13 @@ DIR   *dp;
 #define NOFT       64
 #define NMOUNT      8
 
+#define R 0
+#define W 1
+#define RW 2
+#define APPEND 3
+#define X 4
+#define OWNER_ONLY 5
+
 typedef struct Mount{
   int    dev;       // dev (opened vdisk fd number) 0 means FREE 
   int    ninodes;   // from superblock
