@@ -105,7 +105,7 @@ int init()
   }
 }
 
-char *disk = "disk2"; // Disk for mount_root
+char *disk = 0; // Disk for mount_root
 /*****************************************************
 *
 *  Name:    mount root
@@ -167,6 +167,16 @@ int mount_root()
 int main(int argc, char *argv[ ])
 {
   int ino;
+
+  if(argc == 2){
+     printf("detected diskimage argument: %s...\n", argv[1]);
+     disk = argv[1];
+  }else{
+     printf("no diskimage argument detected...\nselecting disk 2...\n");
+      disk = (char*)malloc(10);
+      strcpy(disk, "disk2");
+
+  }
   //opens disk for read and write
   printf("checking EXT2 FS ....");
   if ((fd = open(disk, O_RDWR)) < 0){

@@ -1,7 +1,9 @@
 rm a.out 2> /dev/null
 
-gcc main.c util.c
+gcc -o project main.c util.c
 
-./a.out
-
+cp mydisk mydisk_backup
+cp disk2_backup disk2
+cp disk3_backup disk3
+./project
 
