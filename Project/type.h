@@ -19,6 +19,28 @@ DIR   *dp;
 #define BLKSIZE  1024
 #define NMINODE   128
 #define NPROC       2
+#define NFD        16
+#define NOFT       64
+#define NMOUNT      8
+
+#define R 0
+#define W 1
+#define RW 2
+#define APPEND 3
+#define X 4
+#define OWNER_ONLY 5
+
+typedef struct Mount{
+  int    dev;       // dev (opened vdisk fd number) 0 means FREE 
+  int    ninodes;   // from superblock
+  int    nblocks;
+  int    bmap;      // from GD block  
+  int    imap;
+  int    iblk;
+  struct minode *mounted_inode;
+  char   name[64];  // device name, e.g. mydisk
+  char   mount_name[64]; // mounted DIR pathname
+} MOUNT;
 
 // MEMORY INODE
 typedef struct minode{
@@ -28,9 +50,17 @@ typedef struct minode{
   int dirty;             // 0 for clean, 1 for modified
 
   int mounted;           // for level-3
-  struct mntable *mptr;  // for level-3
+  struct Mount *mptr;    // for level-3
 }MINODE;
 
+typedef struct oft{ //OpenFileTable
+
+  int mode;
+  int refCount;
+  MINODE* minodePtr;
+  int offset;
+
+}OFT;
 
 typedef struct proc{
   struct proc *next;
@@ -38,5 +68,7 @@ typedef struct proc{
   int          uid;      // user ID
   int          gid;
   int       status;
-  MINODE      *cwd;      // CWD directory pointer  
+  MINODE      *cwd;      // CWD directory pointer 
+
+  OFT *fd[NFD]; 
 }PROC;

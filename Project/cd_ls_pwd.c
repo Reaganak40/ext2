@@ -1,12 +1,26 @@
 /************* cd_ls_pwd.c file **************/
 
+int ls_file(MINODE *mip, char *name);
 // functions used from other source files *******
 extern int findino(MINODE *mip, u32 *myino);
 extern int getino(char *pathname);
 extern int findmyname(MINODE *parent, u32 myino, char myname[ ]);
 extern int is_dir(MINODE* mip);
+<<<<<<< HEAD
 //***********************************************
 
+=======
+extern int has_permission(MINODE* mip, int _mode);
+//***********************************************
+
+/*****************************************************
+*
+*  Name:    cd
+*  Made by: Reagan Kelley
+*  Details: changes working directory to thaty of pathnamwe
+* 
+*****************************************************/
+>>>>>>> origin/Project
 int cd(char *pathname)
 {
   //printf("cd: under construction READ textbook!!!!\n");
@@ -19,6 +33,16 @@ int cd(char *pathname)
 
 
   MINODE* mip = iget(dev, ino); //create a new minode with the inode for that pathname
+
+  if(has_permission(mip, R) == -1){
+    iput(mip);
+    return -1;
+  }
+  if(has_permission(mip, X) == -1){
+    iput(mip);
+    return -1;
+  }
+
 
   if(is_dir(mip) != 0){
     printf("can't cd to a non-directory\n");
@@ -33,6 +57,13 @@ int cd(char *pathname)
 
 }
 
+/*****************************************************
+*
+*  Name:    ls_file
+*  Made by: Reagan Kelley
+*  Details: print ls line for given file
+* 
+*****************************************************/
 int ls_file(MINODE *mip, char *name)
 {
   //printf("ls_file: to be done: READ textbook!!!!\n");
@@ -67,6 +98,8 @@ int ls_file(MINODE *mip, char *name)
     printf("-");
   }else if(strcmp(mode_bits + 12, "0010") == 0){ // 0100 -> is a DIR
     printf("d");
+  }else if(strcmp(mode_bits + 12, "0101") == 0){ // 0100 -> is a DIR
+    printf("l");
   }else{
       printf("[ERROR: Issue reading file type]");
 
@@ -141,8 +174,13 @@ int ls_dir(MINODE *mip)
 
      cp += dp->rec_len; //rec_len is entry length in bytes. So, cp will now point to the byte after the end of the file.
      dp = (DIR *)cp;    //dp will now start at cp (the next entry)
+     iput(fmip); // reset minode 
   }
   printf("\n");
+
+ 
+  return 0;
+
 }
 
 /*****************************************************
@@ -154,8 +192,9 @@ int ls_dir(MINODE *mip)
 *****************************************************/
 int ls(char* pathname)
 {
+  int odev = dev; // originally device (keep track bc dev might change)
   //printf("ls: list CWD only! YOU FINISH IT for ls pathname\n");
-
+  printf("\n");
   if(strlen(pathname) == 0){ //no ls pathname
     ls_dir(running->cwd); //running process is what "calls" the ls command, get its cwd
     return 0;
@@ -175,10 +214,27 @@ int ls(char* pathname)
 
   if(is_dir(mip) != 0){ //pathname is not a directory
     printf("cant ls a non-directory\n");
+    iput(mip);
+    dev = odev; //reset dev to pre-ls
+    return -1;
+  }
+
+  if(has_permission(mip, R) == -1){
+    iput(mip);
+    dev = odev; //reset dev to pre-ls
+    return -1;
+  }
+  if(has_permission(mip, X) == -1){
+    iput(mip);
+    dev = odev; //reset dev to pre-ls
     return -1;
   }
 
   ls_dir(mip); //run ls_dir on the pathname
+  //printf("mip: %d, dev %d, ref count: %d\n", mip->ino, mip->dev, mip->refCount);
+  iput(mip);
+  dev = odev; //reset dev to pre-ls
+  
   return 0;
   
 }
@@ -192,8 +248,14 @@ int ls(char* pathname)
 *           printing the current dir along the way
 * 
 *****************************************************/
-char *pwd(MINODE *wd)
+char *pwd(MINODE *wd, char* record)
 {
+  if(has_permission(wd, R) == -1){
+    return (char*)0;
+  }
+  if(has_permission(wd, X) == -1){
+    return (char*)0;
+  }
 
   u32 my_ino, parent_ino;
   MINODE* pip;
@@ -202,32 +264,70 @@ char *pwd(MINODE *wd)
 
   
   if (wd == root){
-    printf("/");
+
+    if(record != 0)
+      strcat(record, "/");
+    else
+      printf("/");
 
     if(wd == running->cwd){ //this was the last dir in the chain
-      printf("\n");
+      printf("\n\n");
     }
 
     return 0;
   }
-
+  //printf("dev: %d, ino: %d\n", dev, wd->ino);
   parent_ino = findino(wd, &my_ino); //my_ino is this file's inode number. Parent inode is the parent directory of this file
+
+  if(wd->ino == 2){ //if at a mounted root
+
+    for(int i = 0; i < NMOUNT; i++){ // allocate device to mount table
+        if(mountTable[i].dev != 0 && mountTable[i].mounted_inode){
+          if(mountTable[i].mounted_inode->ino == parent_ino){
+            dev = mountTable[i].mounted_inode->dev; // change to new device
+            break;
+          }
+        }
+    }
+
+  }
 
   pip = iget(dev, parent_ino);       //pip becomes the minode for parent directory
 
-  pwd_return_value = pwd(pip); // start working way back up to root
 
-  findmyname(pip, my_ino, name); //get the name of myino
+
+  pwd_return_value = pwd(pip, record); // start working way back up to root
+  
+
+  if(pip->dev != wd->dev){ // if at a mount crossing point
+    strcpy(name, "");
+  }else{
+    findmyname(pip, my_ino, name); //get the name of myino
+  }
 
   if(pwd_return_value != 0){ //if the parent dir is not root
-    printf("/");
+
+    if(pip->dev == wd->dev){ // if not at a mount crossing point
+        if(record != 0)
+      strcat(record, "/");
+      else
+        printf("/");
+    }
   }
-  printf("%s", name);
+  if(record != 0)
+    strcat(record, name);
+  else
+    printf("%s", name);
 
   if(wd == running->cwd){ //this was the last dir in the chain
-    printf("\n");
+    printf("\n\n");
+
+    if(dev != running->cwd->dev){ //if pwd traversed through different systems
+          dev = running->cwd->dev; // reset dev
+    }
   }
 
+  iput(pip);
   return (char*)1;
 
 
